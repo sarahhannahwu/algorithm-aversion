@@ -1,3 +1,3 @@
 # algorithm-aversion
 
-This is a meta-analysis of empirical papers on algorithm aversion/appreciation from as recently as 2024. The empirical articles are taken from seven databases: Scopus, PsycInfo, PubMed, EconLit, ACM, Communications & Mass Media Complete, and Web of Science. 
+This is a meta-analysis of empirical papers on algorithm aversion/appreciation from as recently as 2024. The empirical articles are taken from seven databases: Scopus, PsycInfo, PubMed, EconLit, ACM, Communications & Mass Media Complete, and Web of Science. In each database, we entered combinations of keywords related to (1) algorithm (or artificial intelligence, AI, large language model, LLM, large multimodal model, LMM and (2) aversion (or appreciation, preference, acceptance, favoritism, tolerance, reliance, bias objection, resistance, adherence, deference). 
