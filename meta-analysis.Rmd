@@ -1,0 +1,23 @@
+---
+title: "meta-analysis"
+output: html_document
+date: "2024-08-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import libraries
+
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+## Import csv of coded search results
+
+```{r}
+coded_articles <- read_csv("Inclusion_exclusion coding - mendeley_export.csv")
+```
+
