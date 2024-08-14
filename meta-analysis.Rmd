@@ -25,22 +25,26 @@ coded_articles <- read_csv("Inclusion_exclusion coding - mendeley_export.csv")
 # Identify remaining duplicates. These were all coded as irrelevant.
 
 titles_abstracts <- coded_articles %>% 
-  select(title, abstract)
-
+  select(title, abstract)  
+  
 duplicates <- titles_abstracts %>% 
   group_by_all() %>% 
   filter(n() > 1) %>% 
   ungroup()
 
 # Limit to unique entries
-distinct <- coded_articles %>% 
-  distinct(title, abstract) 
-
-
+# distinct <- coded_articles %>% 
+#   distinct(title) %>% 
+#   filter()
 
 # Count number of included articles
 coded_articles %>% 
   count(`Inclusion: (1) Yes (2) No, not English, (3) No, not focused on AI vs. human, (4) No, other reasons`)
+
+# Filter for relevant articles (1st round of coding). Manually go through and remove any remaining duplicates. (Initially not identified because of slight punctuation differences)
+relevant_articles <- coded_articles %>% 
+  filter(`Inclusion: (1) Yes (2) No, not English, (3) No, not focused on AI vs. human, (4) No, other reasons` == 1) %>% 
+  filter(!(ID %in% c("ID-1355", "ID-291", "ID-264", "ID-109", "ID-137", "ID-1295", "ID-1342", "ID-144", "ID-1134", "ID-127", "ID-459")))
 
 ```
 
