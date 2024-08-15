@@ -48,3 +48,14 @@ relevant_articles <- coded_articles %>%
 
 ```
 
+```{r}
+# Count proportion of each type of method for the relevant articles
+relevant_articles %>% 
+  count(`Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews`) 
+
+# Look at represented domains. It might be more informative to group into fewer buckets. For example, 'healthcare' and 'medical' could be combined into one category. 'Art' and 'visual art' could be combined. 
+relevant_articles %>% 
+  count(domain) %>% 
+  print(n = 90)
+```
+
