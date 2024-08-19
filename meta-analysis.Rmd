@@ -2,6 +2,8 @@
 title: "meta-analysis"
 output: html_document
 date: "2024-08-13"
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -44,7 +46,7 @@ coded_articles %>%
 # Filter for relevant articles (1st round of coding). Manually go through and remove any remaining duplicates. (Initially not identified because of slight punctuation differences)
 relevant_articles <- coded_articles %>% 
   filter(`Inclusion: (1) Yes (2) No, not English, (3) No, not focused on AI vs. human, (4) No, other reasons` == 1) %>% 
-  filter(!(ID %in% c("ID-1355", "ID-291", "ID-264", "ID-109", "ID-137", "ID-1295", "ID-1342", "ID-144", "ID-1134", "ID-127", "ID-459")))
+  filter(!(ID %in% c("ID-1355", "ID-291", "ID-264", "ID-109", "ID-137", "ID-1295", "ID-1342", "ID-144", "ID-1134", "ID-127", "ID-459", "ID-025")))
 
 ```
 
@@ -101,6 +103,11 @@ new_articles_recoded %>%
   count(domain) %>% 
   print(n = 82)
 
+# Check distribution of publication years
+ggplot(new_articles_recoded, aes(x=year)) +
+  geom_histogram(bins = 7, color = "white")
+  
+
 ```
 
 ```{r}
@@ -110,6 +117,7 @@ merged_list <- bind_rows(old_articles, new_articles_recoded)
 # Delete unnecessary columns
 merged_list_cleaned <- merged_list %>% 
   select(-c(author, `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews`, `Article ID_Old`, `Inclusion: (1) Yes (2) No, not English, (3) No, not focused on AI vs. human, (4) No, other reasons`))
+
 
 # Export for use in Google Sheets
 write_csv(merged_list_cleaned, "merged_list_8.19.24.csv")
