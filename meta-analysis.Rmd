@@ -84,7 +84,7 @@ new_articles_recoded <- new_articles %>%
                                     `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "3" ~ "Review",
                                     `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` %in% c("1, 2", NA) ~ "Other")) %>% 
   relocate(Method, .after = `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews`) %>% 
-  mutate(first_author = if_else(str_detect(author, "and") == TRUE, str_extract(author, "(\\S+)\\s+and"), author))
+  mutate(first_author = if_else(str_detect(author, "and") == TRUE, str_extract(author, "\\b(\\w+)\\b(?=\\s+and\\b)"), author))
 
 # Check domains from old list
 old_articles %>% 
