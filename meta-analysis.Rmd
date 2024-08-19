@@ -43,10 +43,14 @@ duplicates <- titles_abstracts %>%
 coded_articles %>% 
   count(`Inclusion: (1) Yes (2) No, not English, (3) No, not focused on AI vs. human, (4) No, other reasons`)
 
-# Filter for relevant articles (1st round of coding). Manually go through and remove any remaining duplicates. (Initially not identified because of slight punctuation differences)
+# Filter for relevant articles (1st round of coding). Manually go through and remove any remaining duplicates. (Initially not identified because of slight punctuation and case differences.) Use str_to_title() to convert all titles to title case
 relevant_articles <- coded_articles %>% 
   filter(`Inclusion: (1) Yes (2) No, not English, (3) No, not focused on AI vs. human, (4) No, other reasons` == 1) %>% 
-  filter(!(ID %in% c("ID-1355", "ID-291", "ID-264", "ID-109", "ID-137", "ID-1295", "ID-1342", "ID-144", "ID-1134", "ID-127", "ID-459", "ID-025")))
+  filter(!(ID %in% c("ID-1355", "ID-291", "ID-264", "ID-109", "ID-137", "ID-1295", "ID-1342", "ID-144", "ID-1134", "ID-127", "ID-459", "ID-025", "ID-023", "ID-1272", "ID-1322", "ID-1444"))) %>% 
+  mutate(title = str_to_title(title))
+
+
+write_csv(relevant_articles, "2024_complete_list.csv")
 
 ```
 
@@ -77,9 +81,7 @@ old_articles <- read_csv("2nd_round_coding_2023_ICA.csv") %>%
          "notes" = "Notes")
 
 # See how many unique entries I added. 
-# Double-check for accuracy. ID-1444 had an incomplete title, so that needs to be fixed so it is properly removed from new_articles.
-new_articles <- anti_join(relevant_articles, old_articles, by = "title") %>% 
-  filter(!ID %in% c("ID-023", "ID-1272", "ID-1322", "ID-1444"))
+new_articles <- anti_join(relevant_articles, old_articles, by = "title")
 
 # Recode methods and domains in new list
 # Last line uses string manipulation to only include first author's last name
@@ -122,6 +124,34 @@ merged_list_cleaned <- merged_list %>%
 
 # Export for use in Google Sheets
 write_csv(merged_list_cleaned, "merged_list_8.19.24.csv")
+
+```
+
+```{r}
+# Create a merged list called '2024 + 2023 first round of coding' with duplicates removed. This will probably be a smaller file
+
+# Import csv
+ICA_1st_round_coding <- read_csv("2023_1st_round_coding.csv") %>% 
+  rename("title" = "Article Title",
+         "first_author_last_name" = "First Author Last Name") %>% 
+  mutate(title = str_to_title(title))
+
+# See how many unique entries I added.
+unique_new_based_on_ICA_1st_round <- anti_join(relevant_articles, ICA_1st_round_coding, by = "title") 
+
+unique_new_recoded <- unique_new_based_on_ICA_1st_round %>% 
+  mutate(Method = case_when(`Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "1" ~ "Quantitative",
+                                    `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "2" ~ "Qualitative",
+                                    `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "3" ~ "Review",
+                                    `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` %in% c("1, 2", NA) ~ "Other")) %>% 
+  relocate(Method, .after = `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews`) %>% 
+  mutate(first_author_last_name = if_else(str_detect(author, "and") == TRUE, str_extract(author, "\\b(\\w+)\\b(?=\\s+and\\b)"), str_extract(author, "\\b([\\w-]+)\\b(?=[^\\w-]*$)"))) 
+
+# There are 185 unique articles
+
+# Join ICA 1st round coding + unique entries
+
+bind_rows(ICA_1st_round_coding, unique_new_based_on_ICA_1st_round)
 
 ```
 
