@@ -82,6 +82,7 @@ new_articles <- anti_join(relevant_articles, old_articles, by = "title") %>%
   filter(!ID %in% c("ID-023", "ID-1272", "ID-1322", "ID-1444"))
 
 # Recode methods and domains in new list
+# Last line uses string manipulation to only include first author's last name
 new_articles_recoded <- new_articles %>% 
   mutate(Method = case_when(`Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "1" ~ "Quantitative",
                                     `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "2" ~ "Qualitative",
