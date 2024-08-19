@@ -70,7 +70,8 @@ write_csv(relevant_articles, "1st_round_coding.csv")
 # Import spreadsheet of articles from ICA 2023 meta-analysis
 old_articles <- read_csv("2nd_round_coding_2023_ICA.csv") %>% 
   rename("title" = "Article name",
-         "domain" = "Task Domain")
+         "domain" = "Task Domain",
+         "first_author_last_name" = "First Author Last Name")
 
 # See how many unique entries I added. 
 # Double-check for accuracy. ID-1444 had an incomplete title, so that needs to be fixed so it is properly removed from new_articles.
@@ -84,7 +85,7 @@ new_articles_recoded <- new_articles %>%
                                     `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "3" ~ "Review",
                                     `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` %in% c("1, 2", NA) ~ "Other")) %>% 
   relocate(Method, .after = `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews`) %>% 
-  mutate(first_author = if_else(str_detect(author, "and") == TRUE, str_extract(author, "\\b(\\w+)\\b(?=\\s+and\\b)"), author))
+  mutate(first_author_last_name = if_else(str_detect(author, "and") == TRUE, str_extract(author, "\\b(\\w+)\\b(?=\\s+and\\b)"), str_extract(author, "\\b([\\w-]+)\\b(?=[^\\w-]*$)")))
 
 # Check domains from old list
 old_articles %>% 
@@ -103,7 +104,6 @@ new_articles_recoded %>%
 
 ```{r}
 # Join old and new list
-
 bind_rows(old_articles, new_articles_recoded)
 ```
 
