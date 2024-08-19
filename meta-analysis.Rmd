@@ -73,7 +73,8 @@ old_articles <- read_csv("2nd_round_coding_2023_ICA.csv") %>%
 
 # See how many unique entries I added. 
 # Double-check for accuracy. ID-1444 had an incomplete title, so that needs to be fixed so it is properly removed from new_articles.
-new_articles <- anti_join(relevant_articles, old_articles, by = "title") %>% filter(ID != "ID-1444")
+new_articles <- anti_join(relevant_articles, old_articles, by = "title") %>% 
+  filter(!ID %in% c("ID-023", "ID-1272", "ID-1322", "ID-1444"))
 
 # Recode methods and domains in new list
 new_articles_recoded <- new_articles %>% 
@@ -86,6 +87,10 @@ new_articles_recoded <- new_articles %>%
 # Check domains from old list
 old_articles %>% 
   count(Field)
+
+old_articles %>% 
+  filter(Field == "business") %>% 
+  print(n = 34)
 
 # Check domains from new list
 new_articles_recoded %>% 
