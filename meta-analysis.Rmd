@@ -114,7 +114,7 @@ ggplot(new_articles_recoded, aes(x=year)) +
 ```
 
 ```{r}
-# Join old and new list
+# Join old and new list to create 'Update on 2023 ICA 2nd round coding'
 merged_list <- bind_rows(old_articles, new_articles_recoded)
 
 # Delete unnecessary columns
@@ -133,25 +133,35 @@ write_csv(merged_list_cleaned, "merged_list_8.19.24.csv")
 # Import csv
 ICA_1st_round_coding <- read_csv("2023_1st_round_coding.csv") %>% 
   rename("title" = "Article Title",
-         "first_author_last_name" = "First Author Last Name") %>% 
-  mutate(title = str_to_title(title))
+         "first_author_last_name" = "First Author Last Name",
+         "Statistics" = "Does this paper have statistical methods",
+         "Method" = "Method (1) experiment, (2) survey, (3) review, (4) other") %>% 
+  mutate(title = str_to_title(title),
+         Year = as.double(Year))
 
-# See how many unique entries I added.
+# See how many unique entries I added. Rename columns so they correctly bind with old list.
 unique_new_based_on_ICA_1st_round <- anti_join(relevant_articles, ICA_1st_round_coding, by = "title") 
 
 unique_new_recoded <- unique_new_based_on_ICA_1st_round %>% 
-  mutate(Method = case_when(`Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "1" ~ "Quantitative",
-                                    `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "2" ~ "Qualitative",
-                                    `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "3" ~ "Review",
+  mutate(Method = case_when(`Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "1" ~ "quantitative",
+                                    `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "2" ~ "qualitative",
+                                    `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "3" ~ "review",
                                     `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` %in% c("1, 2", NA) ~ "Other")) %>% 
+  rename("Statistics" = `Statistics: (1) yes, (2) no`,
+         "Journal" = "journal",
+         "Year" = "year") %>% 
+  mutate(Statistics = case_when(Statistics == "1" ~ "Yes",
+                                Statistics == "2" ~ "No")) %>% 
   relocate(Method, .after = `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews`) %>% 
   mutate(first_author_last_name = if_else(str_detect(author, "and") == TRUE, str_extract(author, "\\b(\\w+)\\b(?=\\s+and\\b)"), str_extract(author, "\\b([\\w-]+)\\b(?=[^\\w-]*$)"))) 
 
-# There are 185 unique articles
+# I added 185 unique articles
 
-# Join ICA 1st round coding + unique entries
+# Join ICA 1st round coding + unique entries to create '2024 + 2023 first round of coding'
+# Delete unnecessary columns
 
-bind_rows(ICA_1st_round_coding, unique_new_based_on_ICA_1st_round)
+merged_based_on_ICA_1st_round <- bind_rows(ICA_1st_round_coding, unique_new_recoded) %>% 
+    select(-c(author, `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews`, `Inclusion: (1) Yes (2) No, not English, (3) No, not focused on AI vs. human, (4) No, other reasons`))
 
 ```
 
