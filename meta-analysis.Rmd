@@ -190,3 +190,48 @@ write_csv(merged_based_on_ICA_1st_round, "2024_+_2023_1st_round_coding.csv")
 # 185 new + 224 old = 409
 ```
 
+```{r}
+# Import merged document with Sunny's second round of coding
+
+merged_2nd_round_coding <- read_csv("2024_+_2023_2nd_round_coding_fixed_authors.csv")  %>% 
+    rename("Sunny_note" = "...16",
+         "title" = "title...2",
+         "Sunny_coding" = "2024 systematic review inclusion and exclusion") 
+
+```
+
+```{r}
+# Remove rows that are coded as irrelevant AND are not useful for the introduction of the paper. 
+excluded_after_2nd_round <- merged_2nd_round_coding %>% 
+  filter((Sunny_coding == "Exclude" & is.na(Sunny_note))) 
+
+# Also remove duplicates
+included_after_2nd_round <- anti_join(merged_2nd_round_coding, excluded_after_2nd_round) %>% 
+  filter(Sunny_coding %in% c("Include", "Exclude", NA)) 
+
+removed_duplicates_after_2nd_round <- included_after_2nd_round %>% 
+  filter(!(new_list_ID %in% c("ID-293", "ID-1274"))) %>% 
+  filter(!(first_author_last_name == "Bogert E, Lauharatanahirun N, Schecter A." & `Field/Discipline` == "Creative")) %>% 
+  filter(!(first_author_last_name %in% c("Commerford, B.P.", "Commerford, Benjamin P.; Dennis, Sean A.; Joe, Jennifer R.; Ulla, Jenny W."))) 
+
+# Check how many papers there are for meta-analysis
+removed_duplicates_after_2nd_round %>% 
+  filter(Sunny_coding %in% c("Include", NA)) %>% 
+  distinct(title) 
+
+
+```
+
+```{r}
+# For papers with more than one study, merge rows so that each row represents one paper. Sum sample sizes, combine all domains into one cell, etc. 
+
+sample_sizes <- removed_duplicates_after_2nd_round %>% 
+  filter(Sunny_coding %in% c("Include", NA)) %>% 
+  mutate(`Sample Size` = if_else(str_detect(`Sample Size`, "[:alpha:]"), NA, `Sample Size`)) %>% 
+  mutate(`Sample Size` = as.numeric(`Sample Size`)) %>% 
+  group_by(first_author_last_name, title) %>% 
+  summarize(sample_size = sum(`Sample Size`))
+
+```
+
+
