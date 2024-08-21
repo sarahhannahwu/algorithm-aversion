@@ -225,12 +225,23 @@ removed_duplicates_after_2nd_round %>%
 ```{r}
 # For papers with more than one study, merge rows so that each row represents one paper. Sum sample sizes, combine all domains into one cell, etc. 
 
+# Fill empty cells with publication year and journal using the helpful function fill()
+
 sample_sizes <- removed_duplicates_after_2nd_round %>% 
   filter(Sunny_coding %in% c("Include", NA)) %>% 
   mutate(`Sample Size` = if_else(str_detect(`Sample Size`, "[:alpha:]"), NA, `Sample Size`)) %>% 
-  mutate(`Sample Size` = as.numeric(`Sample Size`)) %>% 
+  mutate(`Sample Size` = as.numeric(`Sample Size`)) %>%
+  unite(col = "Field_Domain", c(`Field/Discipline`, domain), sep = ", ", na.rm = TRUE) %>% 
   group_by(first_author_last_name, title) %>% 
-  summarize(sample_size = sum(`Sample Size`))
+  mutate(all_DVs = paste0(`Outcome variables`, collapse = "; "),
+         all_tasks = paste0(`Task type`, collapse = "; ")) %>% 
+  group_by(first_author_last_name, title) %>% 
+  mutate(total_sample_size = sum(`Sample Size`)) %>% 
+  select(-(title...14)) %>% 
+  fill(Year, Journal)
+
+
+
 
 ```
 
