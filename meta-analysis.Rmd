@@ -227,20 +227,32 @@ removed_duplicates_after_2nd_round %>%
 
 # Fill empty cells with publication year and journal using the helpful function fill()
 
-sample_sizes <- removed_duplicates_after_2nd_round %>% 
-  filter(Sunny_coding %in% c("Include", NA)) %>% 
+merged_sample_sizes_tasks <- removed_duplicates_after_2nd_round %>% 
+  mutate(Journal = str_to_title(Journal)) %>% 
+  group_by(first_author_last_name, title) %>% 
+  fill(Year, Journal, Sunny_coding) %>% 
+  filter(Sunny_coding == "Include") %>% 
   mutate(`Sample Size` = if_else(str_detect(`Sample Size`, "[:alpha:]"), NA, `Sample Size`)) %>% 
   mutate(`Sample Size` = as.numeric(`Sample Size`)) %>%
   unite(col = "Field_Domain", c(`Field/Discipline`, domain), sep = ", ", na.rm = TRUE) %>% 
+  unite(col = "country", c(Region, city_country), sep = ";", na.rm = TRUE) %>% 
   group_by(first_author_last_name, title) %>% 
   mutate(all_DVs = paste0(`Outcome variables`, collapse = "; "),
-         all_tasks = paste0(`Task type`, collapse = "; ")) %>% 
+         all_tasks = paste0(`Task type`, collapse = "; ")) %>%
+  mutate(all_DVs = str_remove(all_DVs, "NA; "),
+         all_tasks = str_remove(all_tasks, "NA; ")) %>% 
   group_by(first_author_last_name, title) %>% 
   mutate(total_sample_size = sum(`Sample Size`)) %>% 
+  group_by(first_author_last_name, title) %>% 
   select(-(title...14)) %>% 
-  fill(Year, Journal)
+  mutate(first_author_last_name = str_extract(first_author_last_name, "[^,]+")) %>% 
+  arrange(first_author_last_name) 
 
+one_paper_per_row <- merged_sample_sizes_tasks %>% 
+  filter(is.na(study))
+# Export to fix manually in Google Sheets
 
+write_csv(one_paper_per_row, "merged_sample_sizes_tasks.csv")
 
 
 ```
