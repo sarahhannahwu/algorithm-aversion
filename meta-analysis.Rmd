@@ -257,4 +257,4 @@ write_csv(one_paper_per_row, "merged_sample_sizes_tasks.csv")
 
 ```
 
-
+## Make a nice table that summarizes all the included papers
