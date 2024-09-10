@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(dplyr)
+library(kableExtra)
 ```
 
 ## Import csv of coded search results
@@ -91,7 +92,8 @@ new_articles_recoded <- new_articles %>%
                                     `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` == "3" ~ "Review",
                                     `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews` %in% c("1, 2", NA) ~ "Other")) %>% 
   relocate(Method, .after = `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews`) %>% 
-  mutate(first_author_last_name = if_else(str_detect(author, "and") == TRUE, str_extract(author, "\\b(\\w+)\\b(?=\\s+and\\b)"), str_extract(author, "\\b([\\w-]+)\\b(?=[^\\w-]*$)")))
+  mutate(first_author_last_name = if_else(str_detect(author, "and") == TRUE, str_extract(author, "\\b(\\w+)\\b(?=\\s+and\\b)"), str_extract(author, "\\b([\\w-]+)\\b(?=[^\\w-]*$)"))) %>% 
+  mutate(year = as.factor(year))
 
 # Check domains from old list
 old_articles %>% 
@@ -108,7 +110,10 @@ new_articles_recoded %>%
 
 # Check distribution of publication years
 ggplot(new_articles_recoded, aes(x=year)) +
-  geom_histogram(bins = 7, color = "white")
+  geom_histogram(fill = "#f9da78", color = "white", stat = "count") +
+  theme(axis.title = element_text(size = 14)) +
+  labs(x="Year",
+       y="Count")
   
 
 ```
@@ -257,4 +262,37 @@ write_csv(one_paper_per_row, "merged_sample_sizes_tasks.csv")
 
 ```
 
+```{r}
+# Analyze distribution of publication years from working table
+working_table <- read_csv("working_table_Sep10.csv") %>% 
+  mutate(Year = as.factor(Year)) %>% 
+  filter(!is.na(Year)) 
+
+ggplot(working_table, aes(x=Year)) +
+  geom_histogram(fill = "#f9da78", color = "white", stat = "count") +
+  theme(axis.title = element_text(size = 14)) +
+  labs(x="Year",
+       y="Count")
+  
+```
+
 ## Make a nice table that summarizes all the included papers
+
+```{r}
+sample_table <- working_table %>% 
+  filter(`Sunny notes` == "Include") %>% 
+  select(first_author_last_name, title, Year, Journal, Method, total_sample_size, Field_Domain, Algorithm_orientations, task_objectivity) %>% 
+  rename("First Author" = first_author_last_name,
+         "Title" = title,
+         "N" = total_sample_size,
+         "Field" = Field_Domain,
+         "Algorithm Orientations" = Algorithm_orientations,
+         "Task Objectivity" = task_objectivity) %>% 
+  mutate(Method = str_to_title(Method)) %>% 
+  mutate(Method = if_else(`First Author` == "Aljuneidi", "Interviews", Method))
+
+sample_table %>% 
+  kbl() %>% 
+  kable_paper("striped")
+```
+
