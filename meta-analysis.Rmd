@@ -289,10 +289,34 @@ sample_table <- working_table %>%
          "Algorithm Orientations" = Algorithm_orientations,
          "Task Objectivity" = task_objectivity) %>% 
   mutate(Method = str_to_title(Method)) %>% 
-  mutate(Method = if_else(`First Author` == "Aljuneidi", "Interviews", Method))
+  mutate(Method = if_else(`First Author` == "Aljuneidi", "Interviews", Method)) %>% 
+  mutate(N = as.numeric(N))
 
 sample_table %>% 
   kbl() %>% 
   kable_paper("striped")
+```
+
+```{r}
+ggplot(sample_table, aes(x = Field)) +
+  geom_bar() +
+  coord_flip()
+
+# Visualize year, author, sample size, and method
+ggplot(sample_table, aes(x=`First Author`, y=Year, size=N, color=Method)) +
+  geom_point() +
+  coord_flip()
+
+# Need to reduce number of fields to make the patterns more clear
+ggplot(sample_table, aes(x = Method, fill = Field)) +
+  geom_bar()
+
+sample_table %>% 
+  mutate(Field = if_else(str_detect(Field, "Medical"), "Medical", Field),
+         Field = if_else(str_detect(Field, "Tech"), "Technology", Field),
+         Field = if_else(str_detect(Field, "Finance"), "Business", Field)) %>% 
+  ggplot(aes(x=Field, fill=Method)) +
+  geom_bar() +
+  coord_flip()
 ```
 
