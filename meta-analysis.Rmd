@@ -348,12 +348,14 @@ coded_table %>%
   count(Algorithm_orientations) %>% 
   mutate(prop = n/sum(n))
 
+# Change the classes of objects
 coded_table_classes <- coded_table %>% 
   drop_na(task_objectivity, Type_of_human_manipulated, N) %>% 
   mutate(N = as.numeric(N)) %>% 
   mutate(Algorithm_orientations = as.factor(Algorithm_orientations)) %>% 
   mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Algorithm aversion", "Algorithm appreciation", "Both", "Neutral")))
-  
+
+# Combinations of task objectivity and human comparison
 ggplot(coded_table_classes, aes(x=task_objectivity, y=Type_of_human_manipulated, color=Algorithm_orientations)) +
   geom_point(alpha=0.5) +
   geom_jitter() +
