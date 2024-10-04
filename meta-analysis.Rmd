@@ -16,6 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(dplyr)
 library(kableExtra)
+library(colorspace)
 ```
 
 ## Import csv of coded search results
@@ -142,7 +143,7 @@ ICA_1st_round_coding <- read_csv("2023_1st_round_coding.csv") %>%
          "Statistics" = "Does this paper have statistical methods",
          "Method" = "Method (1) experiment, (2) survey, (3) review, (4) other") %>% 
   mutate(title = str_to_title(title),
-         Year = as.double(Year))
+         Year = as.factor(Year))
 
 # Multiple rows could refer to the same paper because each study is given its own row. Check to see how many *papers* there are
 ICA_1st_round_coding %>% 
@@ -168,10 +169,18 @@ unique_new_recoded <- unique_new_based_on_ICA_1st_round %>%
                                 Statistics == "2" ~ "No")) %>% 
   relocate(Method, .after = `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews`) %>% 
   mutate(first_author_last_name = if_else(str_detect(author, "and") == TRUE, str_extract(author, "\\b(\\w+)\\b(?=\\s+and\\b)"), str_extract(author, "\\b([\\w-]+)\\b(?=[^\\w-]*$)"))) %>% 
-  mutate(title = str_to_title(title))
+  mutate(title = str_to_title(title)) %>% 
+  mutate(Year = as.factor(Year))
 
 # I added 185 unique articles. Export and get pdfs
 write_csv(unique_new_recoded, "algorithm_aversion_papers_8.20.24.csv")
+
+# Check distribution of publication years
+ggplot(unique_new_recoded, aes(x=Year)) +
+  geom_histogram(fill = "#f9da78", color = "white", stat = "count") +
+  theme(axis.title = element_text(size = 14)) +
+  labs(x="Year",
+       y="Count")
 ```
 
 
@@ -183,11 +192,11 @@ merged_based_on_ICA_1st_round <- bind_rows(ICA_1st_round_coding, unique_new_reco
     select(-c(author, `Method: (1) quantitative, (2) qualitative, (3) meta analysis, reviews`, `Inclusion: (1) Yes (2) No, not English, (3) No, not focused on AI vs. human, (4) No, other reasons`))
 
 
-# Distribution of publication years
-merged_based_on_ICA_1st_round %>% 
-  filter(Year > 2014) %>% 
-  ggplot(aes(x = Year)) +
-  geom_histogram(bins = 7)
+# # Distribution of publication years
+# merged_based_on_ICA_1st_round %>% 
+#   filter(Year > 2014) %>% 
+#   ggplot(aes(x = Year)) +
+#   geom_histogram(bins = 7)
 
 # Export
 write_csv(merged_based_on_ICA_1st_round, "2024_+_2023_1st_round_coding.csv")
@@ -264,16 +273,17 @@ write_csv(one_paper_per_row, "merged_sample_sizes_tasks.csv")
 
 ```{r}
 # Analyze distribution of publication years from working table
-working_table <- read_csv("working_table_Sep10.csv") %>% 
+working_table <- read_csv("working_table_Sep11.csv") %>% 
   mutate(Year = as.factor(Year)) %>% 
-  filter(!is.na(Year)) 
+  filter(!is.na(Year)) %>% 
+  filter(`Sunny notes` == "Include")
 
 ggplot(working_table, aes(x=Year)) +
   geom_histogram(fill = "#f9da78", color = "white", stat = "count") +
   theme(axis.title = element_text(size = 14)) +
   labs(x="Year",
        y="Count")
-  
+
 ```
 
 ## Make a nice table that summarizes all the included papers
@@ -318,5 +328,51 @@ sample_table %>%
   ggplot(aes(x=Field, fill=Method)) +
   geom_bar() +
   coord_flip()
+```
+
+## I finished coding 175 articles. Now, double-checking work here!
+
+```{r}
+# Import coded 175 articles. 
+
+coded_table <- read_csv("working_table_Oct4.csv")
+
+# I see some gaps in agent task and some of the algorithm types near the bottom need to be recoded to use the exact wording in the paper.
+```
+
+
+```{r}
+# Get frequencies of aversion, appreciation
+
+coded_table %>% 
+  count(Algorithm_orientations) %>% 
+  mutate(prop = n/sum(n))
+
+coded_table_classes <- coded_table %>% 
+  drop_na(task_objectivity, Type_of_human_manipulated, N) %>% 
+  mutate(N = as.numeric(N)) %>% 
+  mutate(Algorithm_orientations = as.factor(Algorithm_orientations)) %>% 
+  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Algorithm aversion", "Algorithm appreciation", "Both", "Neutral")))
+  
+ggplot(coded_table_classes, aes(x=task_objectivity, y=Type_of_human_manipulated, color=Algorithm_orientations)) +
+  geom_point(alpha=0.5) +
+  geom_jitter() +
+  theme_minimal() +
+  theme(panel.grid = element_blank())
+```
+
+```{r}
+# Remake table
+coded_table %>% 
+  select(first_author_last_name, title, Year, Journal, journal_field, Method, N, task_objectivity, Type_of_human_manipulated, Algorithm_orientations) %>% 
+  rename("First Author" = first_author_last_name,
+         "Title" = title,
+         "Journal Field" = journal_field,
+         "Algorithm Orientations" = Algorithm_orientations,
+         "Task Objectivity" = task_objectivity,
+         "Human Comparison" = Type_of_human_manipulated) %>% 
+  mutate(Method = str_to_title(Method)) %>% 
+  kbl() %>% 
+  kable_paper("striped")
 ```
 
