@@ -410,12 +410,16 @@ coded_table_classes %>%
 ```{r}
 # Import the edited table that addresses the identified gaps
 
+
+
+# Table of types of algorithms and their frequencies
 coded_table %>% 
   count(type_of_algorithm) %>% 
   arrange(desc(n)) %>% 
   kbl() %>% 
   kable_paper("striped")
 
+# Graph of journal fields
 coded_table %>% 
   count(journal_field) %>% 
   arrange(desc(n)) %>% 
@@ -429,5 +433,14 @@ coded_table %>%
   mutate(AI_or_not = if_else(str_detect(type_of_algorithm, "AI"), "Yes", "No")) %>% 
   ggplot(aes(x=AI_or_not)) +
   geom_bar()
+```
+
+```{r}
+# Rates of algorithm aversion over time
+ggplot(coded_table_classes, aes(x=Year, fill=Algorithm_orientations)) +
+  geom_histogram(bins=9, color="white") +
+  scale_fill_manual(name="Algorithm Orientation",
+                    values = c("#9D0208", "#FFBA08", "#E85D04", "#CED4DA"))
+
 ```
 
