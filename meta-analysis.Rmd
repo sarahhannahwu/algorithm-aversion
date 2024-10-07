@@ -366,14 +366,15 @@ ggplot(coded_table_classes, aes(x=task_objectivity, y=Type_of_human_manipulated,
 ```{r}
 # Remake table
 coded_table %>% 
-  select(first_author_last_name, title, Year, Journal, journal_field, Method, theory_framework, N, task_objectivity, Type_of_human_manipulated, Algorithm_orientations) %>% 
+  select(first_author_last_name, title, Year, Journal, journal_field, Method, theory_framework, N, task_objectivity, Type_of_human_manipulated, Algorithm_orientations, Summary_of_findings) %>% 
   rename("First Author" = first_author_last_name,
          "Title" = title,
          "Journal Field" = journal_field,
          "Algorithm Orientations" = Algorithm_orientations,
          "Task Objectivity" = task_objectivity,
          "Human Comparison" = Type_of_human_manipulated,
-         "Theoretical Framework" = theory_framework) %>% 
+         "Theoretical Framework" = theory_framework,
+         "Summary of Findings" = Summary_of_findings) %>% 
   mutate(Method = str_to_title(Method)) %>% 
   kbl() %>% 
   kable_paper("striped")
@@ -385,5 +386,9 @@ coded_table %>%
   count(journal_field) %>% 
   arrange(desc(n)) %>% 
   print(n=34)
+```
+
+```{r}
+# Import the edited table that addresses the identified gaps
 ```
 
