@@ -17,6 +17,7 @@ library(tidyverse)
 library(dplyr)
 library(kableExtra)
 library(colorspace)
+library(EnvStats)
 ```
 
 ## Import csv of coded search results
@@ -386,9 +387,47 @@ coded_table %>%
   count(journal_field) %>% 
   arrange(desc(n)) %>% 
   print(n=34)
+
+# Methods
+coded_table %>% 
+  count(Method) %>% 
+  arrange(desc(n))
+
+# Graph of methods. Good colors could be red for aversion, yellow for appreciation, orange for both, silver for neutral
+coded_table_classes %>% 
+  filter(Method %in% c("experiment", "survey", "mixed-methods", "interviews")) %>% 
+  ggplot(aes(x=Method, fill=Algorithm_orientations)) +
+  geom_bar(position = "fill") + 
+  labs(y="Proportion") +
+  scale_fill_manual(name="Algorithm Orientation",
+                    values = c("#9D0208", "#FFBA08", "#E85D04", "#CED4DA")) +
+  theme_light() 
+
+# Table of types of algorithms
+
 ```
 
 ```{r}
 # Import the edited table that addresses the identified gaps
+
+coded_table %>% 
+  count(type_of_algorithm) %>% 
+  arrange(desc(n)) %>% 
+  kbl() %>% 
+  kable_paper("striped")
+
+coded_table %>% 
+  count(journal_field) %>% 
+  arrange(desc(n)) %>% 
+  ggplot(aes(x=fct_reorder(journal_field, n), y=n)) +
+  geom_col(fill="midnightblue") +
+  coord_flip() +
+  labs(x="Journal Field") +
+  theme_light()
+
+coded_table %>% 
+  mutate(AI_or_not = if_else(str_detect(type_of_algorithm, "AI"), "Yes", "No")) %>% 
+  ggplot(aes(x=AI_or_not)) +
+  geom_bar()
 ```
 
