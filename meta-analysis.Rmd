@@ -18,6 +18,7 @@ library(dplyr)
 library(kableExtra)
 library(colorspace)
 library(EnvStats)
+library(ggrepel)
 ```
 
 ## Import csv of coded search results
@@ -354,7 +355,9 @@ coded_table_classes <- coded_table %>%
   drop_na(task_objectivity, Type_of_human_manipulated, N) %>% 
   mutate(N = as.numeric(N)) %>% 
   mutate(Algorithm_orientations = as.factor(Algorithm_orientations)) %>% 
-  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Algorithm aversion", "Algorithm appreciation", "Both", "Neutral")))
+  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Algorithm aversion", "Algorithm appreciation", "Both", "Neutral"))) %>% 
+  mutate(task_objectivity = as.factor(task_objectivity),
+         task_objectivity = fct_relevel(task_objectivity, c("Objective", "Combined", "Subjective")))
 
 # Combinations of task objectivity and human comparison
 ggplot(coded_table_classes, aes(x=task_objectivity, y=Type_of_human_manipulated, color=Algorithm_orientations)) +
@@ -442,5 +445,26 @@ ggplot(coded_table_classes, aes(x=Year, fill=Algorithm_orientations)) +
   scale_fill_manual(name="Algorithm Orientation",
                     values = c("#9D0208", "#FFBA08", "#E85D04", "#CED4DA"))
 
+```
+
+```{r}
+# Subjective vs. objective tasks, self vs. other, algorithm orientations
+
+coded_table_classes %>% 
+  count(agent_tasks) %>% 
+  arrange(desc(n)) %>% 
+  print(n=150)
+
+coded_table_classes %>% 
+  filter(task_objectivity %in% c("Subjective", "Combined", "Objective"),
+         `subject of the decision` %in% c("self", "others")) %>% 
+  ggplot(aes(x=task_objectivity, y=`subject of the decision`, color=Type_of_human_manipulated)) +
+  geom_jitter() +
+  geom_text(data=subset(coded_table_classes, str_detect(agent_tasks, "forecast the price of a stock|recommend a product|generate dating profile|HR|classify|provide a diagnosis") & nchar(agent_tasks) < 30), aes(label = agent_tasks), size=2, color="black") +
+  facet_wrap(~Algorithm_orientations) +
+  labs(x="Task objectivity",
+       y="Subject of decision",
+       color="Relative to whom?") +
+  scale_color_manual(values = c("#56AB91", "#003D5B", "#EDAE49", "white"))
 ```
 
