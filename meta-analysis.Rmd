@@ -19,6 +19,7 @@ library(kableExtra)
 library(colorspace)
 library(EnvStats)
 library(ggrepel)
+library(treemapify)
 ```
 
 ## Import csv of coded search results
@@ -353,9 +354,11 @@ coded_table %>%
 # Change the classes of objects
 coded_table_classes <- coded_table %>% 
   drop_na(task_objectivity, Type_of_human_manipulated, N) %>% 
+  mutate(Type_of_human_manipulated = if_else(Type_of_human_manipulated == "Expert", "Experts", Type_of_human_manipulated)) %>% 
   mutate(N = as.numeric(N)) %>% 
   mutate(Algorithm_orientations = as.factor(Algorithm_orientations)) %>% 
   mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Algorithm aversion", "Algorithm appreciation", "Both", "Neutral"))) %>% 
+  mutate(Type_of_human_manipulated = fct_relevel(Type_of_human_manipulated, c("Experts", "Laypeople", "Both", "None"))) %>% 
   mutate(task_objectivity = as.factor(task_objectivity),
          task_objectivity = fct_relevel(task_objectivity, c("Objective", "Combined", "Subjective")))
 
@@ -423,7 +426,7 @@ coded_table %>%
   kable_paper("striped")
 
 # Graph of journal fields
-coded_table %>% 
+coded_table_classes %>% 
   count(journal_field) %>% 
   arrange(desc(n)) %>% 
   ggplot(aes(x=fct_reorder(journal_field, n), y=n)) +
@@ -442,6 +445,7 @@ coded_table %>%
 # Rates of algorithm aversion over time
 ggplot(coded_table_classes, aes(x=Year, fill=Algorithm_orientations)) +
   geom_histogram(bins=9, color="white") +
+  geom_text(aes(label = ..count..), stat = "count") +
   scale_fill_manual(name="Algorithm Orientation",
                     values = c("#9D0208", "#FFBA08", "#E85D04", "#CED4DA"))
 
@@ -455,16 +459,131 @@ coded_table_classes %>%
   arrange(desc(n)) %>% 
   print(n=150)
 
+
+# All features combined in one graph, too busy
 coded_table_classes %>% 
   filter(task_objectivity %in% c("Subjective", "Combined", "Objective"),
          `subject of the decision` %in% c("self", "others")) %>% 
   ggplot(aes(x=task_objectivity, y=`subject of the decision`, color=Type_of_human_manipulated)) +
   geom_jitter() +
-  geom_text(data=subset(coded_table_classes, str_detect(agent_tasks, "forecast the price of a stock|recommend a product|generate dating profile|HR|classify|provide a diagnosis") & nchar(agent_tasks) < 30), aes(label = agent_tasks), size=2, color="black") +
+  geom_text(data=subset(coded_table_classes, str_detect(agent_tasks, "forecast the price of a stock|recommend a product|generate dating profile|HR|classify|provide a diagnosis|prioritize healthcare resources") & nchar(agent_tasks) < 32), aes(label = agent_tasks), size=2, color="black") +
   facet_wrap(~Algorithm_orientations) +
   labs(x="Task objectivity",
        y="Subject of decision",
        color="Relative to whom?") +
-  scale_color_manual(values = c("#56AB91", "#003D5B", "#EDAE49", "white"))
+  scale_color_manual(values = c("#99D98C", "#EDAE49", "#003D5B", "gray")) +
+  theme_light()
+```
+
+```{r}
+# Make a simpler graph of frequencies of outcomes for different human comparisons
+
+coded_table_classes %>% 
+  mutate(Algorithm_orientations = case_when(Algorithm_orientations == "Both" ~ "Aversion and appreciation",
+                                            Algorithm_orientations == "Algorithm aversion" ~ "Aversion",
+                                            Algorithm_orientations == "Algorithm appreciation" ~ "Appreciation",
+                                            Algorithm_orientations == "Neutral" ~ "Neutral")) %>%
+  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Aversion", "Appreciation", "Aversion and appreciation", "Neutral"))) %>% 
+  group_by(Algorithm_orientations) %>% 
+  count(Type_of_human_manipulated) %>% 
+  mutate(prop =n/sum(n)) %>% 
+  ggplot(aes(x=Type_of_human_manipulated, y=prop, fill=Algorithm_orientations)) +
+  geom_col() +
+  facet_wrap(~Algorithm_orientations) +
+  theme_light() +
+  labs(x="Human reference point",
+       y="Proportion of articles") +
+  scale_y_continuous(breaks = c(0, .1, .2, .3, .4, .5, .6)) +
+  scale_fill_manual(name = "Algorithm orientations",
+    values = c("#9D0208", "#FFBA08", "#E85D04", "#CED4DA")) +
+  theme(axis.title = element_text(size = 14),
+        legend.position = "none")
+```
+
+```{r}
+# Sample sizes across algorithm orientations
+
+ggplot(coded_table_classes, aes(x=N, color=Algorithm_orientations)) +
+  geom_density(alpha=.25) +
+  xlim(c(0, 7500))
+```
+
+```{r}
+# Year and method
+coded_table_classes %>% 
+  filter(Method %in% c("experiment", "field experiment", "interviews", "mixed-methods", "survey", "review")) %>% 
+  ggplot(aes(x=Year, fill=Method)) +
+  geom_bar()
+```
+
+```{r}
+# Treemap for each algorithm orientation? Nah, too confusing
+
+# coded_table_classes %>% 
+#   filter(task_objectivity %in% c("Objective", "Combined", "Subjective")) %>% 
+#   filter(Type_of_human_manipulated %in% c("Experts", "Laypeople", "Both")) %>%
+#   group_by(Algorithm_orientations) %>% 
+#   count(task_objectivity, Type_of_human_manipulated) %>% 
+#   mutate(prop = n/sum(n)) %>% 
+#   ggplot(aes(area=prop, fill=Type_of_human_manipulated, label=task_objectivity, subgroup=Type_of_human_manipulated)) +
+#   geom_treemap() +
+#   geom_treemap_text(color="white",place="center", size=12) +
+#   facet_wrap(~Algorithm_orientations,
+#              labeller = labeller(Algorithm_orientations = algorithm_orientation.labs)) +
+#   labs(fill="Human reference point") 
+```
+
+```{r}
+# Import updated table
+task_domains <- read_csv("working_table_Oct10.csv")
+```
+
+
+```{r}
+# Graph of task domain frequencies
+relabeled_domains <- task_domains %>% 
+  drop_na(task_domain) %>% 
+  mutate(task_domain = if_else(first_author_last_name == "Hohensinn", "Legal/Ethical decisions", task_domain)) %>% 
+  mutate(task_domain = case_when(task_domain == "Forecasting and Predictive Analysis" ~ "Finance and Predictive Analysis",
+                                 task_domain == "HR/Education decisions" ~ "Career and Education",
+                                 task_domain == "Creative tasks" ~ "Arts and Language",
+                                 task_domain == "Healthcare/Medical decisions" ~ "Healthcare and Medical",
+                                 task_domain == "Legal/Ethical decisions" ~ "Legal and Ethical",
+                                 task_domain == "Customer and community services" ~ "Customer and Public Service",
+                                 task_domain == "Classification/Memory tasks" ~ "Classification and Memory",
+                                 task_domain == "Multiple" ~ "Multiple")) 
+
+relabeled_domains %>% 
+  count(task_domain) %>% 
+  arrange(desc(n)) %>% 
+  ggplot(aes(x=fct_reorder(task_domain, n), y=n)) +
+  geom_col(fill="midnightblue") +
+  coord_flip() +
+  labs(x="Task Domain") +
+  theme_light() +
+  labs(x="Number of Articles")
+
+# Would use the following if you wanted to arrange in descending order by frequency of domain
+# ggplot(aes(x = forcats::fct_rev(fct_infreq(task_domain)))) 
+
+relabeled_domains %>% 
+  drop_na(Algorithm_orientations) %>% 
+  count(Algorithm_orientations) %>% 
+  mutate(prop = n/sum(n))
+
+relabeled_domains %>% 
+  drop_na(Algorithm_orientations) %>% 
+  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Algorithm aversion", "Algorithm appreciation", "Both", "Neutral"))) %>% 
+  ggplot(aes(x = fct_rev(fct_infreq(task_domain)))) +
+  geom_bar(aes(fill = Algorithm_orientations), position="fill") +
+  geom_abline(intercept = 0.5, slope = 0, "dotted") +
+  coord_flip() +
+  labs(x="Task Domain",
+       y="Proportion of Articles") +
+  theme_light() +
+  scale_fill_manual(name="Algorithm Orientation",
+                    values = c("#9D0208", "#FFBA08", "#E85D04", "#CED4DA")) 
+  
+  
 ```
 
