@@ -20,6 +20,8 @@ library(colorspace)
 library(EnvStats)
 library(ggrepel)
 library(treemapify)
+library(wesanderson)
+library(ggsci)
 ```
 
 ## Import csv of coded search results
@@ -573,17 +575,66 @@ relabeled_domains %>%
 
 relabeled_domains %>% 
   drop_na(Algorithm_orientations) %>% 
-  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Algorithm aversion", "Algorithm appreciation", "Both", "Neutral"))) %>% 
+  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Neutral", "Both", "Algorithm appreciation", "Algorithm aversion"))) %>% 
   ggplot(aes(x = fct_rev(fct_infreq(task_domain)))) +
-  geom_bar(aes(fill = Algorithm_orientations), position="fill") +
-  geom_abline(intercept = 0.5, slope = 0, "dotted") +
+  geom_bar(aes(fill = Algorithm_orientations), position="stack") +
   coord_flip() +
   labs(x="Task Domain",
-       y="Proportion of Articles") +
+       y="Number of Articles") +
   theme_light() +
   scale_fill_manual(name="Algorithm Orientation",
-                    values = c("#9D0208", "#FFBA08", "#E85D04", "#CED4DA")) 
+                    values = c("#A11E22", "#E8A631","#E8C898", "lightblue"),
+                    breaks=c('Algorithm aversion', 'Algorithm appreciation', 'Both', "Neutral")) +
+  theme(legend.direction = "horizontal",
+        legend.position = "top")
   
+relabeled_domains %>% 
+  drop_na(Algorithm_orientations) %>% 
+  group_by(task_domain) %>% 
+  count(Algorithm_orientations) %>% 
+  mutate(prop = n/sum(n)) %>% 
+  filter(Algorithm_orientations == "Algorithm aversion") %>% 
+  ggplot(aes(x=reorder(task_domain, prop), y=prop)) +
+  geom_col(fill="#A11E22") +
+  geom_hline(yintercept=.5, linetype=2, color="darkgray") +
+  coord_flip() +
+  theme_light() +
+  labs(x="Task Domain",
+       y="Proportion of articles finding algorithm aversion",
+       caption = "Dashed line at y = 0.5 indicates the mean rate of algorithm aversion across all articles in the sample") 
   
+```
+
+```{r}
+task_domains %>% 
+  count(type_of_algorithm) %>% 
+  arrange(desc(n))
+
+broad_tech_categories <- task_domains %>% 
+  mutate(broad_tech_category = case_when(str_detect(type_of_algorithm, "AI|ChatGPT") ~ "AI",
+                                         str_detect(type_of_algorithm, "robot") ~ "robot",
+                                         str_detect(type_of_algorithm, "chatbot") ~ "chatbot",
+                                         str_detect(type_of_algorithm, "machine learning|machine-learning") ~ "machine learning algorithm",
+                                         str_detect(type_of_algorithm, "vehicle|car") ~ "self-driving vehicle")) %>%
+  mutate(broad_tech_category = replace_na(broad_tech_category, replace="rule-based algorithm"))
+
+broad_tech_categories %>% 
+  count(broad_tech_category) %>% 
+  arrange(desc(n))
+
+# Prevalence of types of algorithms over time
+broad_tech_categories %>% 
+  mutate(Year = if_else(first_author_last_name == "Chiou", 2021, Year)) %>% 
+  group_by(Year) %>% 
+  count(broad_tech_category) %>% 
+  ggplot(aes(x=Year, y=n, color=broad_tech_category)) +
+  geom_line(aes(group=broad_tech_category), alpha=0.5) +
+  geom_point(size=2) +
+  labs(x="Year",
+       y="Number of articles",
+       color="Technology") +
+  scale_x_continuous(breaks = seq(2015, 2024, by=1)) +
+  scale_color_locuszoom(breaks=c("AI", "rule-based algorithm", "machine learning algorithm", "robot", "self-driving vehicle", "chatbot")) +
+  theme_light()
 ```
 
