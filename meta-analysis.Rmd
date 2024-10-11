@@ -22,6 +22,7 @@ library(ggrepel)
 library(treemapify)
 library(wesanderson)
 library(ggsci)
+library(patchwork)
 ```
 
 ## Import csv of coded search results
@@ -445,10 +446,15 @@ coded_table %>%
 
 ```{r}
 # Rates of algorithm aversion over time
-ggplot(coded_table_classes, aes(x=Year, fill=Algorithm_orientations)) +
-  geom_histogram(bins=9, color="white") +
-  geom_text(aes(label = ..count..), stat = "count") +
-  scale_fill_manual(name="Algorithm Orientation",
+coded_table_classes %>% 
+  drop_na(Algorithm_orientations) %>% 
+  group_by(Year) %>% 
+  count(Algorithm_orientations) %>%
+  mutate(prop=n/sum(n)) %>% 
+  ggplot(aes(x=Year, y=prop, color=Algorithm_orientations)) +
+  geom_line(aes(group=Algorithm_orientations)) +
+  geom_point() +
+  scale_color_manual(name="Algorithm Orientation",
                     values = c("#9D0208", "#FFBA08", "#E85D04", "#CED4DA"))
 
 ```
@@ -572,23 +578,37 @@ relabeled_domains %>%
   drop_na(Algorithm_orientations) %>% 
   count(Algorithm_orientations) %>% 
   mutate(prop = n/sum(n))
+```
 
-relabeled_domains %>% 
+
+```{r}
+# Orientations by Task Domain
+results_by_task_domain <- relabeled_domains %>% 
   drop_na(Algorithm_orientations) %>% 
   mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Neutral", "Both", "Algorithm appreciation", "Algorithm aversion"))) %>% 
   ggplot(aes(x = fct_rev(fct_infreq(task_domain)))) +
   geom_bar(aes(fill = Algorithm_orientations), position="stack") +
   coord_flip() +
-  labs(x="Task Domain",
-       y="Number of Articles") +
+  labs(x="Task domain",
+       y="Number of articles") +
   theme_light() +
   scale_fill_manual(name="Algorithm Orientation",
                     values = c("#A11E22", "#E8A631","#E8C898", "lightblue"),
-                    breaks=c('Algorithm aversion', 'Algorithm appreciation', 'Both', "Neutral")) +
-  theme(legend.direction = "horizontal",
-        legend.position = "top")
-  
-relabeled_domains %>% 
+                    breaks=c('Algorithm aversion', 'Algorithm appreciation', 'Both', "Neutral"),
+                    labels=c("Aversion", "Appreciation", "Aversion & Appreciation", "Neutral")) +
+  theme(legend.position = "top",
+        legend.key.spacing = unit(1, "mm"),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size=8),
+        axis.title = element_text(size=14))
+
+results_by_task_domain
+```
+
+
+```{r}
+# Just algorithm aversion
+algorithm_aversion_by_task_domain <- relabeled_domains %>% 
   drop_na(Algorithm_orientations) %>% 
   group_by(task_domain) %>% 
   count(Algorithm_orientations) %>% 
@@ -599,10 +619,18 @@ relabeled_domains %>%
   geom_hline(yintercept=.5, linetype=2, color="darkgray") +
   coord_flip() +
   theme_light() +
-  labs(x="Task Domain",
+  labs(x="",
        y="Proportion of articles finding algorithm aversion",
-       caption = "Dashed line at y = 0.5 indicates the mean rate of algorithm aversion across all articles in the sample") 
+       caption = "Dashed line at y = 0.5 indicates the mean rate of algorithm aversion\nacross all articles in the sample") +
+  theme(axis.title = element_text(size=14))
+
+algorithm_aversion_by_task_domain
   
+```
+
+```{r}
+# Combine the plots
+results_by_task_domain + algorithm_aversion_by_task_domain
 ```
 
 ```{r}
