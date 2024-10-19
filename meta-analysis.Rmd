@@ -376,10 +376,8 @@ ggplot(coded_table_classes, aes(x=task_objectivity, y=Type_of_human_manipulated,
 ```{r}
 # Remake table
 coded_table %>% 
-  select(first_author_last_name, title, Year, Journal, journal_field, Method, theory_framework, N, task_objectivity, Type_of_human_manipulated, Algorithm_orientations, Summary_of_findings) %>% 
+  select(first_author_last_name, Year, Method, theory_framework, task_objectivity, Type_of_human_manipulated, Algorithm_orientations, Summary_of_findings) %>% 
   rename("First Author" = first_author_last_name,
-         "Title" = title,
-         "Journal Field" = journal_field,
          "Algorithm Orientations" = Algorithm_orientations,
          "Task Objectivity" = task_objectivity,
          "Human Comparison" = Type_of_human_manipulated,
@@ -438,6 +436,8 @@ coded_table_classes %>%
   labs(x="Journal Field") +
   theme_light()
 
+# Need to clean and combine categories. For example, Advertising should be under Communication 
+
 coded_table %>% 
   mutate(AI_or_not = if_else(str_detect(type_of_algorithm, "AI"), "Yes", "No")) %>% 
   ggplot(aes(x=AI_or_not)) +
@@ -469,32 +469,33 @@ coded_table_classes %>%
 
 
 # All features combined in one graph, too busy
-coded_table_classes %>% 
-  filter(task_objectivity %in% c("Subjective", "Combined", "Objective"),
-         `subject of the decision` %in% c("self", "others")) %>% 
-  ggplot(aes(x=task_objectivity, y=`subject of the decision`, color=Type_of_human_manipulated)) +
-  geom_jitter() +
-  geom_text(data=subset(coded_table_classes, str_detect(agent_tasks, "forecast the price of a stock|recommend a product|generate dating profile|HR|classify|provide a diagnosis|prioritize healthcare resources") & nchar(agent_tasks) < 32), aes(label = agent_tasks), size=2, color="black") +
-  facet_wrap(~Algorithm_orientations) +
-  labs(x="Task objectivity",
-       y="Subject of decision",
-       color="Relative to whom?") +
-  scale_color_manual(values = c("#99D98C", "#EDAE49", "#003D5B", "gray")) +
-  theme_light()
+# coded_table_classes %>% 
+#   filter(task_objectivity %in% c("Subjective", "Combined", "Objective"),
+#          `subject of the decision` %in% c("self", "others")) %>% 
+#   ggplot(aes(x=task_objectivity, y=`subject of the decision`, color=Type_of_human_manipulated)) +
+#   geom_jitter() +
+#   geom_text(data=subset(coded_table_classes, str_detect(agent_tasks, "forecast the price of a stock|recommend a product|generate dating profile|HR|classify|provide a diagnosis|prioritize healthcare resources") & nchar(agent_tasks) < 32), aes(label = agent_tasks), size=2, color="black") +
+#   facet_wrap(~Algorithm_orientations) +
+#   labs(x="Task objectivity",
+#        y="Subject of decision",
+#        color="Relative to whom?") +
+#   scale_color_manual(values = c("#99D98C", "#EDAE49", "#003D5B", "gray")) +
+#   theme_light()
 ```
 
 ```{r}
 # Make a simpler graph of frequencies of outcomes for different human comparisons
 
 coded_table_classes %>% 
-  mutate(Algorithm_orientations = case_when(Algorithm_orientations == "Both" ~ "Aversion and appreciation",
+  mutate(Algorithm_orientations = case_when(Algorithm_orientations == "Both" ~ "Mixed",
                                             Algorithm_orientations == "Algorithm aversion" ~ "Aversion",
                                             Algorithm_orientations == "Algorithm appreciation" ~ "Appreciation",
                                             Algorithm_orientations == "Neutral" ~ "Neutral")) %>%
-  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Aversion", "Appreciation", "Aversion and appreciation", "Neutral"))) %>% 
+  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Aversion", "Appreciation", "Mixed", "Neutral"))) %>% 
   group_by(Algorithm_orientations) %>% 
   count(Type_of_human_manipulated) %>% 
   mutate(prop =n/sum(n)) %>% 
+  filter(Type_of_human_manipulated %in% c("Experts", "Laypeople")) %>%
   ggplot(aes(x=Type_of_human_manipulated, y=prop, fill=Algorithm_orientations)) +
   geom_col() +
   facet_wrap(~Algorithm_orientations) +
@@ -503,7 +504,7 @@ coded_table_classes %>%
        y="Proportion of articles") +
   scale_y_continuous(breaks = c(0, .1, .2, .3, .4, .5, .6)) +
   scale_fill_manual(name = "Algorithm orientations",
-    values = c("#9D0208", "#FFBA08", "#E85D04", "#CED4DA")) +
+    values = c("#A11E22", "#E8A631","#E8C898", "lightblue")) +
   theme(axis.title = element_text(size = 14),
         legend.position = "none")
 ```
@@ -585,17 +586,20 @@ relabeled_domains %>%
 # Orientations by Task Domain
 results_by_task_domain <- relabeled_domains %>% 
   drop_na(Algorithm_orientations) %>% 
+  filter(task_domain != "Multiple") %>% 
   mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Neutral", "Both", "Algorithm appreciation", "Algorithm aversion"))) %>% 
   ggplot(aes(x = fct_rev(fct_infreq(task_domain)))) +
   geom_bar(aes(fill = Algorithm_orientations), position="stack") +
   coord_flip() +
   labs(x="Task domain",
-       y="Number of articles") +
+       y="Number of articles",
+       fill="Result",
+       tag = "a") +
   theme_light() +
-  scale_fill_manual(name="Algorithm Orientation",
+  scale_fill_manual(
                     values = c("#A11E22", "#E8A631","#E8C898", "lightblue"),
                     breaks=c('Algorithm aversion', 'Algorithm appreciation', 'Both', "Neutral"),
-                    labels=c("Aversion", "Appreciation", "Aversion & Appreciation", "Neutral")) +
+                    labels=c("Aversion", "Appreciation", "Mixed", "Neutral")) +
   theme(legend.position = "top",
         legend.key.spacing = unit(1, "mm"),
         legend.title = element_text(size = 10),
@@ -614,6 +618,8 @@ algorithm_aversion_by_task_domain <- relabeled_domains %>%
   count(Algorithm_orientations) %>% 
   mutate(prop = n/sum(n)) %>% 
   filter(Algorithm_orientations == "Algorithm aversion") %>% 
+  filter(task_domain != "Multiple") %>% 
+  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Neutral", "Both", "Algorithm appreciation", "Algorithm aversion"))) %>% 
   ggplot(aes(x=reorder(task_domain, prop), y=prop)) +
   geom_col(fill="#A11E22") +
   geom_hline(yintercept=.5, linetype=2, color="darkgray") +
@@ -621,7 +627,8 @@ algorithm_aversion_by_task_domain <- relabeled_domains %>%
   theme_light() +
   labs(x="",
        y="Proportion of articles finding algorithm aversion",
-       caption = "Dashed line at y = 0.5 indicates the mean rate of algorithm aversion\nacross all articles in the sample") +
+       caption = "Dashed line at y = 0.5 indicates the mean rate of algorithm aversion\nacross all articles in the sample",
+       tag = "b") +
   theme(axis.title = element_text(size=14))
 
 algorithm_aversion_by_task_domain
@@ -632,6 +639,7 @@ algorithm_aversion_by_task_domain
 # Combine the plots
 results_by_task_domain + algorithm_aversion_by_task_domain
 ```
+
 
 ```{r}
 task_domains %>% 
@@ -644,25 +652,34 @@ broad_tech_categories <- task_domains %>%
                                          str_detect(type_of_algorithm, "chatbot") ~ "chatbot",
                                          str_detect(type_of_algorithm, "machine learning|machine-learning") ~ "machine learning algorithm",
                                          str_detect(type_of_algorithm, "vehicle|car") ~ "self-driving vehicle")) %>%
-  mutate(broad_tech_category = replace_na(broad_tech_category, replace="rule-based algorithm"))
+  mutate(broad_tech_category = replace_na(broad_tech_category, replace="rule-based algorithm")) %>% 
+  mutate(broadest_tech_category = case_when(broad_tech_category == "AI" ~ "AI",
+                                            broad_tech_category == "rule-based algorithm" ~ "rule-based algorithm",
+                                            broad_tech_category %in% c("chatbot", "robot", "machine learning algorithm", "self-driving vehicle") ~ "other"))
 
 broad_tech_categories %>% 
-  count(broad_tech_category) %>% 
+  count(broadest_tech_category) %>% 
   arrange(desc(n))
 
 # Prevalence of types of algorithms over time
 broad_tech_categories %>% 
   mutate(Year = if_else(first_author_last_name == "Chiou", 2021, Year)) %>% 
   group_by(Year) %>% 
-  count(broad_tech_category) %>% 
-  ggplot(aes(x=Year, y=n, color=broad_tech_category)) +
-  geom_line(aes(group=broad_tech_category), alpha=0.5) +
-  geom_point(size=2) +
+  count(broadest_tech_category) %>% 
+  ggplot(aes(x=Year, y=n, color=broadest_tech_category)) +
+  geom_line(aes(group=broadest_tech_category), size = 1) +
+  geom_point(size=3) +
   labs(x="Year",
        y="Number of articles",
        color="Technology") +
   scale_x_continuous(breaks = seq(2015, 2024, by=1)) +
-  scale_color_locuszoom(breaks=c("AI", "rule-based algorithm", "machine learning algorithm", "robot", "self-driving vehicle", "chatbot")) +
-  theme_light()
+  scale_y_continuous(limits = c(0,30), breaks = seq(0, 30, by=5)) +
+  scale_color_npg(breaks=c("AI", "rule-based algorithm", "other"),
+                  labels=c("'AI'", "rule-based 'algorithm'", "other")) +
+  theme_light() +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size=14),
+        legend.title = element_blank(),
+        legend.text = element_text(size=14))
 ```
 
