@@ -1,5 +1,5 @@
 ---
-title: "meta-analysis"
+title: "systematic review"
 output: html_document
 date: "2024-08-13"
 editor_options: 
@@ -510,14 +510,6 @@ coded_table_classes %>%
 ```
 
 ```{r}
-# Sample sizes across algorithm orientations
-
-ggplot(coded_table_classes, aes(x=N, color=Algorithm_orientations)) +
-  geom_density(alpha=.25) +
-  xlim(c(0, 7500))
-```
-
-```{r}
 # Year and method
 coded_table_classes %>% 
   filter(Method %in% c("experiment", "field experiment", "interviews", "mixed-methods", "survey", "review")) %>% 
@@ -526,59 +518,41 @@ coded_table_classes %>%
 ```
 
 ```{r}
-# Treemap for each algorithm orientation? Nah, too confusing
-
-# coded_table_classes %>% 
-#   filter(task_objectivity %in% c("Objective", "Combined", "Subjective")) %>% 
-#   filter(Type_of_human_manipulated %in% c("Experts", "Laypeople", "Both")) %>%
-#   group_by(Algorithm_orientations) %>% 
-#   count(task_objectivity, Type_of_human_manipulated) %>% 
-#   mutate(prop = n/sum(n)) %>% 
-#   ggplot(aes(area=prop, fill=Type_of_human_manipulated, label=task_objectivity, subgroup=Type_of_human_manipulated)) +
-#   geom_treemap() +
-#   geom_treemap_text(color="white",place="center", size=12) +
-#   facet_wrap(~Algorithm_orientations,
-#              labeller = labeller(Algorithm_orientations = algorithm_orientation.labs)) +
-#   labs(fill="Human reference point") 
-```
-
-```{r}
 # Import updated table
 task_domains <- read_csv("working_table_Oct10.csv")
 ```
 
-
 ```{r}
-# Graph of task domain frequencies
-relabeled_domains <- task_domains %>% 
-  drop_na(task_domain) %>% 
-  mutate(task_domain = if_else(first_author_last_name == "Hohensinn", "Legal/Ethical decisions", task_domain)) %>% 
-  mutate(task_domain = case_when(task_domain == "Forecasting and Predictive Analysis" ~ "Finance and Predictive Analysis",
-                                 task_domain == "HR/Education decisions" ~ "Career and Education",
-                                 task_domain == "Creative tasks" ~ "Arts and Language",
-                                 task_domain == "Healthcare/Medical decisions" ~ "Healthcare and Medical",
-                                 task_domain == "Legal/Ethical decisions" ~ "Legal and Ethical",
-                                 task_domain == "Customer and community services" ~ "Customer and Public Service",
-                                 task_domain == "Classification/Memory tasks" ~ "Classification and Memory",
-                                 task_domain == "Multiple" ~ "Multiple")) 
-
-relabeled_domains %>% 
-  count(task_domain) %>% 
-  arrange(desc(n)) %>% 
-  ggplot(aes(x=fct_reorder(task_domain, n), y=n)) +
-  geom_col(fill="midnightblue") +
-  coord_flip() +
-  labs(x="Task Domain") +
-  theme_light() +
-  labs(x="Number of Articles")
-
-# Would use the following if you wanted to arrange in descending order by frequency of domain
-# ggplot(aes(x = forcats::fct_rev(fct_infreq(task_domain)))) 
-
-relabeled_domains %>% 
-  drop_na(Algorithm_orientations) %>% 
-  count(Algorithm_orientations) %>% 
-  mutate(prop = n/sum(n))
+# # Graph of task domain frequencies
+# relabeled_domains <- task_domains %>% 
+#   drop_na(task_domain) %>% 
+#   mutate(task_domain = if_else(first_author_last_name == "Hohensinn", "Legal/Ethical decisions", task_domain)) %>% 
+#   mutate(task_domain = case_when(task_domain == "Forecasting and Predictive Analysis" ~ "Finance and Predictive Analysis",
+#                                  task_domain == "HR/Education decisions" ~ "Career and Education",
+#                                  task_domain == "Creative tasks" ~ "Arts and Language",
+#                                  task_domain == "Healthcare/Medical decisions" ~ "Healthcare and Medical",
+#                                  task_domain == "Legal/Ethical decisions" ~ "Legal and Ethical",
+#                                  task_domain == "Customer and community services" ~ "Customer and Public Service",
+#                                  task_domain == "Classification/Memory tasks" ~ "Classification and Memory",
+#                                  task_domain == "Multiple" ~ "Multiple")) 
+# 
+# relabeled_domains %>% 
+#   count(task_domain) %>% 
+#   arrange(desc(n)) %>% 
+#   ggplot(aes(x=fct_reorder(task_domain, n), y=n)) +
+#   geom_col(fill="midnightblue") +
+#   coord_flip() +
+#   labs(x="Task Domain") +
+#   theme_light() +
+#   labs(x="Number of Articles")
+# 
+# # Would use the following if you wanted to arrange in descending order by frequency of domain
+# # ggplot(aes(x = forcats::fct_rev(fct_infreq(task_domain)))) 
+# 
+# relabeled_domains %>% 
+#   drop_na(Algorithm_orientations) %>% 
+#   count(Algorithm_orientations) %>% 
+#   mutate(prop = n/sum(n))
 ```
 
 
@@ -682,4 +656,116 @@ broad_tech_categories %>%
         legend.title = element_blank(),
         legend.text = element_text(size=14))
 ```
+
+```{r}
+final_table <- read_csv("final_table.csv") %>% 
+  mutate(task_domain = if_else(str_detect(task_domain, "Ethical"), "Ethical", task_domain),
+         task_domain = if_else(str_detect(task_domain, "Community services"), "Public Policy", task_domain),
+         task_domain = if_else(str_detect(task_domain, "Creative tasks"), "Creative", task_domain),
+         task_domain = if_else(str_detect(task_domain, "Memory tasks"), "Memory", task_domain))
+final_table_classes <- final_table %>% 
+  mutate(N = as.numeric(N),
+         Algorithm_orientations = as.factor(Algorithm_orientations))
+
+```
+
+
+```{r}
+final_table_results_by_task_domain <- final_table_classes %>% 
+  drop_na(Algorithm_orientations) %>% 
+  filter(task_domain != "Multiple") %>% 
+  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Neutral", "Both", "Algorithm appreciation", "Algorithm aversion"))) %>% 
+  ggplot(aes(x = fct_rev(fct_infreq(task_domain)))) +
+  geom_bar(aes(fill = Algorithm_orientations), position="stack") +
+  coord_flip() +
+  labs(x="Task domain",
+       y="Number of articles in sample",
+       fill="Result",
+       tag = "a)") +
+  theme_light() +
+  scale_fill_manual(
+                    values = c("#A11E22", "#E8A631","#E8C898", "lightblue"),
+                    breaks=c('Algorithm aversion', 'Algorithm appreciation', 'Both', "Neutral"),
+                    labels=c("Aversion", "Appreciation", "Mixed", "Neutral")) +
+  theme(legend.position = "top",
+        legend.key.spacing = unit(1, "mm"),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size=8),
+        axis.title = element_text(size=14))
+
+final_table_results_by_task_domain
+```
+
+```{r}
+final_table_classes %>% 
+  count(Algorithm_orientations) %>% 
+  mutate(prop=n/sum(n))
+  
+```
+
+```{r}
+final_table_algorithm_aversion <- final_table_classes %>% 
+  drop_na(Algorithm_orientations) %>% 
+  group_by(task_domain) %>% 
+  count(Algorithm_orientations) %>% 
+  mutate(prop = n/sum(n)) %>% 
+  filter(Algorithm_orientations == "Algorithm aversion") %>% 
+  filter(task_domain != "Multiple",
+         task_domain != "Other") %>% 
+  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Neutral", "Both", "Algorithm appreciation", "Algorithm aversion"))) %>% 
+  ggplot(aes(x=reorder(task_domain, prop), y=prop)) +
+  geom_col(fill="#A11E22") +
+  geom_hline(yintercept=.51, linetype=2, color="darkgray") +
+  coord_flip() +
+  theme_light() +
+  labs(x="Task domain",
+       y="Proportion of articles finding algorithm aversion",
+       tag = "b)") +
+  theme(axis.title = element_text(size=14))
+
+final_table_algorithm_aversion
+```
+
+```{r}
+final_table_classes %>% 
+  mutate(journal_field = if_else(str_detect(journal_field, "HCI"), "HCI and Robotics", journal_field),
+         journal_field = if_else(str_detect(journal_field, "Business"), "Business and Management", journal_field)) %>% 
+  count(journal_field) %>% 
+  rename("Journal Field" = journal_field) %>% 
+  arrange(desc(n)) %>% 
+  kbl() %>% 
+  kable_paper("striped")
+
+
+final_table_classes %>% 
+    mutate(journal_field = if_else(str_detect(journal_field, "HCI"), "HCI and Robotics", journal_field),
+         journal_field = if_else(str_detect(journal_field, "Business"), "Business and Management", journal_field)) %>% 
+  count(journal_field) %>% 
+  arrange(desc(n)) %>% 
+  ggplot(aes(x=fct_reorder(journal_field, n), y=n)) +
+  geom_col(fill="midnightblue") +
+  coord_flip() +
+  labs(x="Journal field",
+       y="Number of articles in sample") +
+  theme_light()
+
+ggplot(final_table_classes, aes(x=Year)) +
+  geom_bar(fill="midnightblue") +
+  scale_x_continuous(breaks = seq(2015, 2024, by=1)) +
+  labs(y="Number of articles in sample") +
+  theme_light() +
+  theme(axis.title = element_text(size =14))
+
+final_table_classes %>% 
+  count(participant_region_broad) %>% 
+  mutate(participant_region_broad = if_else(str_detect(participant_region_broad, ","), "Multiple", participant_region_broad)) %>% 
+  ggplot(aes(x=fct_reorder(participant_region_broad, n), y=n)) +
+  geom_col(fill="midnightblue") +
+  coord_flip() +
+  labs(x="Participant region",
+       y="Number of articles in sample") +
+  theme_light() +
+  theme(axis.title = element_text(size =14))
+```
+
 
