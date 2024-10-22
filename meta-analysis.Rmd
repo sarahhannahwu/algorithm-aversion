@@ -23,6 +23,8 @@ library(treemapify)
 library(wesanderson)
 library(ggsci)
 library(patchwork)
+library(webshot2)
+library(ggpubr)
 ```
 
 ## Import csv of coded search results
@@ -663,9 +665,18 @@ final_table <- read_csv("final_table.csv") %>%
          task_domain = if_else(str_detect(task_domain, "Community services"), "Public Policy", task_domain),
          task_domain = if_else(str_detect(task_domain, "Creative tasks"), "Creative", task_domain),
          task_domain = if_else(str_detect(task_domain, "Memory tasks"), "Memory", task_domain))
+
 final_table_classes <- final_table %>% 
   mutate(N = as.numeric(N),
-         Algorithm_orientations = as.factor(Algorithm_orientations))
+         Algorithm_orientations = as.factor(Algorithm_orientations),
+         study_design_human_description = as.factor(study_design_human_description)) %>% 
+  mutate(Algorithm_orientations = case_when(Algorithm_orientations == "Both" ~ "Mixed",
+                                            Algorithm_orientations == "Algorithm aversion" ~ "Aversion",
+                                            Algorithm_orientations == "Algorithm appreciation" ~ "Appreciation",
+                                            Algorithm_orientations == "Neutral" ~ "Neutral")) %>%
+  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Aversion", "Appreciation", "Mixed", "Neutral"))) %>% 
+  mutate(study_design_human_description = fct_relevel(study_design_human_description, c("Expert", "Laypeople", "Both", "None"))) 
+
 
 ```
 
@@ -704,18 +715,24 @@ final_table_classes %>%
 ```
 
 ```{r}
+final_table_classes %>% 
+  drop_na(Algorithm_orientations) %>% 
+  filter(task_domain != "Multiple",
+         task_domain != "Other") %>% 
+  count(Algorithm_orientations) %>% 
+  mutate(prop = n/sum(n)) 
+
 final_table_algorithm_aversion <- final_table_classes %>% 
   drop_na(Algorithm_orientations) %>% 
+  filter(task_domain != "Multiple",
+         task_domain != "Other") %>% 
   group_by(task_domain) %>% 
   count(Algorithm_orientations) %>% 
   mutate(prop = n/sum(n)) %>% 
-  filter(Algorithm_orientations == "Algorithm aversion") %>% 
-  filter(task_domain != "Multiple",
-         task_domain != "Other") %>% 
-  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Neutral", "Both", "Algorithm appreciation", "Algorithm aversion"))) %>% 
+  filter(Algorithm_orientations == "Aversion") %>% 
   ggplot(aes(x=reorder(task_domain, prop), y=prop)) +
   geom_col(fill="#A11E22") +
-  geom_hline(yintercept=.51, linetype=2, color="darkgray") +
+  geom_hline(yintercept=.53, linetype=2, color="darkgray") +
   coord_flip() +
   theme_light() +
   labs(x="Task domain",
@@ -736,7 +753,7 @@ final_table_classes %>%
   kbl() %>% 
   kable_paper("striped")
 
-
+# Journal fields
 final_table_classes %>% 
     mutate(journal_field = if_else(str_detect(journal_field, "HCI"), "HCI and Robotics", journal_field),
          journal_field = if_else(str_detect(journal_field, "Business"), "Business and Management", journal_field)) %>% 
@@ -749,6 +766,15 @@ final_table_classes %>%
        y="Number of articles in sample") +
   theme_light()
 
+final_table_classes %>% 
+  filter(journal_field == "Interdisciplinary") %>% 
+  count(Journal) %>% 
+  arrange(desc(n))
+```
+
+
+```{r}
+# Publication years
 ggplot(final_table_classes, aes(x=Year)) +
   geom_bar(fill="midnightblue") +
   scale_x_continuous(breaks = seq(2015, 2024, by=1)) +
@@ -756,6 +782,7 @@ ggplot(final_table_classes, aes(x=Year)) +
   theme_light() +
   theme(axis.title = element_text(size =14))
 
+# Participant regions
 final_table_classes %>% 
   count(participant_region_broad) %>% 
   mutate(participant_region_broad = if_else(str_detect(participant_region_broad, ","), "Multiple", participant_region_broad)) %>% 
@@ -768,4 +795,96 @@ final_table_classes %>%
   theme(axis.title = element_text(size =14))
 ```
 
+
+```{r}
+# Figure of human alternatives by result
+
+final_table_classes %>% 
+  group_by(Algorithm_orientations) %>% 
+  count(study_design_human_description) %>% 
+  mutate(prop = n/sum(n)) %>% 
+  ggplot(aes(x=study_design_human_description, y=prop, fill=Algorithm_orientations)) +
+  geom_col() +
+  facet_wrap(~Algorithm_orientations) +
+  labs(x="Human alternative",
+       y= "Proportion of articles") +
+  scale_fill_manual(values = c("#A11E22", "#E8A631","#E8C898", "lightblue")) +
+  theme_light() +
+  theme(legend.position = "none",
+        axis.title = element_text(size=14))
+
+final_table_classes %>% 
+  filter(Algorithm_orientations == "Appreciation" & study_design_human_description == "Laypeople")
+
+final_table_classes %>% 
+  count(study_design_human_description) %>% 
+  arrange(desc(n))
+
+# Human alternatives and participant populations
+
+final_table_classes %>% 
+  mutate(Sample = if_else(str_detect(Sample, ","), "multiple", Sample)) %>% 
+  filter(Sample %in% c("professional", "general public", "college students")) %>% 
+  filter(study_design_human_description != "Both") %>% 
+  group_by(Sample) %>% 
+  count(study_design_human_description) %>% 
+  mutate(prop=n/sum(n)) %>% 
+  ggplot(aes(x=Sample, y=prop, fill=study_design_human_description)) +
+  geom_bar(stat="identity", position="fill") +
+  geom_text(aes(label = study_design_human_description), position = position_fill(vjust=0.5), size=2.5) +
+  coord_flip() +
+  theme(legend.position = "none") +
+  labs(x="Participant Population",
+       y="Proportions of each type of human alternative")
+
+  
+
+# final_table_classes %>% 
+#   mutate(Sample = if_else(str_detect(Sample, ","), "multiple", Sample)) %>% 
+#   filter(Sample %in% c("professional", "general public", "college students")) %>% 
+#   group_by(Sample) %>% 
+#   count(study_design_human_description) %>% 
+#   ggballoonplot(x = "study_design_human_description", y = "Sample", size = "n", show.label = TRUE) +
+#   labs(x="Human Alternative",
+#        y="Participant Population")
+
+  
+```
+
+```{r}
+# Algorithm orientations across participant populations
+final_table_classes %>%
+  mutate(Sample = if_else(str_detect(Sample, ","), "multiple", Sample)) %>%
+  filter(Sample %in% c("professional", "general public", "college students")) %>%
+  mutate(Algorithm_orientations = fct_relevel(Algorithm_orientations, c("Neutral", "Mixed", "Appreciation", "Aversion"))) %>% 
+  ggplot(aes(x=Sample, fill = Algorithm_orientations)) +
+  geom_bar(position="fill") +
+  scale_fill_manual(
+                    values = c("#A11E22", "#E8A631","#E8C898", "lightblue"),
+                    breaks=c('Aversion', 'Appreciation', 'Mixed', "Neutral"),
+                    labels=c("Aversion", "Appreciation", "Mixed", "Neutral")) +
+  labs(y="Proportion of articles",
+       fill="Result") +
+  theme_light() +
+  theme(axis.title=element_text(size =14))
+
+```
+
+```{r}
+wip_table <- final_table_classes %>% 
+  select(Algorithm_orientations, Method, task_objectivity, task_domain, agent_tasks, first_author_last_name) %>%
+  rename("First Author" = first_author_last_name,
+         "Objectivity" = task_objectivity,
+         "Domain" = task_domain,
+         "Agent's Task" = agent_tasks,
+         "Result" = Algorithm_orientations) %>% 
+  mutate(Method = str_to_title(Method)) %>% 
+  group_by(Result) %>% 
+  slice_sample(prop = .1)
+
+kable(wip_table) %>% 
+  kable_paper() %>% 
+  collapse_rows(1, valign = "top") %>% 
+  add_header_above(c("Study Details" = 2, "Task Features"=3, " "=1))
+```
 
