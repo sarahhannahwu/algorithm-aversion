@@ -472,20 +472,6 @@ coded_table_classes %>%
   arrange(desc(n)) %>% 
   print(n=150)
 
-
-# All features combined in one graph, too busy
-# coded_table_classes %>% 
-#   filter(task_objectivity %in% c("Subjective", "Combined", "Objective"),
-#          `subject of the decision` %in% c("self", "others")) %>% 
-#   ggplot(aes(x=task_objectivity, y=`subject of the decision`, color=Type_of_human_manipulated)) +
-#   geom_jitter() +
-#   geom_text(data=subset(coded_table_classes, str_detect(agent_tasks, "forecast the price of a stock|recommend a product|generate dating profile|HR|classify|provide a diagnosis|prioritize healthcare resources") & nchar(agent_tasks) < 32), aes(label = agent_tasks), size=2, color="black") +
-#   facet_wrap(~Algorithm_orientations) +
-#   labs(x="Task objectivity",
-#        y="Subject of decision",
-#        color="Relative to whom?") +
-#   scale_color_manual(values = c("#99D98C", "#EDAE49", "#003D5B", "gray")) +
-#   theme_light()
 ```
 
 ```{r}
@@ -994,15 +980,16 @@ final_table_Oct24_classes %>%
   kable_classic(html_font = "arial")
 ```
 ```{r}
-final_table_Oct24_classes %>%
-  tabyl(Algorithm_orientations, Method) %>%
-  adorn_totals(where = c("row", "col")) %>% 
-  adorn_percentages("col") %>%
-  adorn_pct_formatting(digits = 0) %>%
-  adorn_ns(position="front") %>% 
-  kbl(col.names = c("", "Experiment", "Survey", "Interviews", "Mixed-methods", "Other", "Total"), linesep = "") %>% 
-  add_header_above(c(" " = 1, "Method" = 5, " " = 1)) %>% 
-  kable_classic(html_font = "arial") 
+# method crosstab
+# final_table_Oct24_classes %>%
+#   tabyl(Algorithm_orientations, Method) %>%
+#   adorn_totals(where = c("row", "col")) %>% 
+#   adorn_percentages("col") %>%
+#   adorn_pct_formatting(digits = 0) %>%
+#   adorn_ns(position="front") %>% 
+#   kbl(col.names = c("", "Experiment", "Survey", "Interviews", "Mixed-methods", "Other", "Total"), linesep = "") %>% 
+#   add_header_above(c(" " = 1, "Method" = 5, " " = 1)) %>% 
+#   kable_classic(html_font = "arial") 
 ```
 
 ```{r}
@@ -1057,28 +1044,28 @@ final_table_Oct24_classes %>%
 
 ```{r}
 # Task objectivity crosstab
-final_table_Oct24_classes %>%
-  tabyl(Algorithm_orientations, task_objectivity) %>%
-  adorn_totals(where=c("row", "col")) %>% 
-  adorn_percentages("col") %>%
-  adorn_pct_formatting(digits = 0) %>%
-  adorn_ns(position="front") %>% 
-  kbl(col.names = c("", "Objective", "Subjective", "Combined", "Other", "Total")) %>%
-  add_header_above(c(" " =1, "Task objectivity" = 4, " " =1)) %>% 
-  kable_classic(html_font = "arial")
+# final_table_Oct24_classes %>%
+#   tabyl(Algorithm_orientations, task_objectivity) %>%
+#   adorn_totals(where=c("row", "col")) %>% 
+#   adorn_percentages("col") %>%
+#   adorn_pct_formatting(digits = 0) %>%
+#   adorn_ns(position="front") %>% 
+#   kbl(col.names = c("", "Objective", "Subjective", "Combined", "Other", "Total")) %>%
+#   add_header_above(c(" " =1, "Task objectivity" = 4, " " =1)) %>% 
+#   kable_classic(html_font = "arial")
 ```
 
 ```{r}
 # Human alternative crosstab
-final_table_Oct24_classes %>%
-  tabyl(Algorithm_orientations, human_alternative) %>%
-  adorn_totals(where=c("row", "col")) %>% 
-  adorn_percentages("col") %>%
-  adorn_pct_formatting(digits = 0) %>%
-  adorn_ns(position="front") %>% 
-  kbl(col.names = c("", "Oneself", "Experts", "Laypeople", "Experts and Laypeople", "Total")) %>%
-  add_header_above(c(" "=1, "Human alternative" = 4, " " = 1)) %>% 
-  kable_classic(html_font = "arial")
+# final_table_Oct24_classes %>%
+#   tabyl(Algorithm_orientations, human_alternative) %>%
+#   adorn_totals(where=c("row", "col")) %>% 
+#   adorn_percentages("col") %>%
+#   adorn_pct_formatting(digits = 0) %>%
+#   adorn_ns(position="front") %>% 
+#   kbl(col.names = c("", "Oneself", "Experts", "Laypeople", "Experts and Laypeople", "Total")) %>%
+#   add_header_above(c(" "=1, "Human alternative" = 4, " " = 1)) %>% 
+#   kable_classic(html_font = "arial")
 ```
 
 ```{r}
@@ -1133,13 +1120,13 @@ final_table_Oct24_classes %>%
 ```{r}
 # Human alternatives for each orientation
 
-final_table_Oct24_classes %>% 
-  group_by(Algorithm_orientations) %>% 
+final_table_Oct26_years %>% 
+  group_by(`Algorithm Orientation`) %>% 
   count(human_alternative) %>% 
   mutate(prop = n/sum(n)) %>% 
-  ggplot(aes(x=human_alternative, y=prop, fill=Algorithm_orientations)) +
+  ggplot(aes(x=human_alternative, y=prop, fill=`Algorithm Orientation`)) +
   geom_col() +
-  facet_wrap(~Algorithm_orientations) +
+  facet_wrap(~`Algorithm Orientation`) +
   labs(x="Human alternative",
        y= "Proportion of articles") +
   scale_fill_manual(values = c("#A11E22", "#E8A631","#E8C898", "lightblue")) +
@@ -1375,7 +1362,7 @@ final_table_classes %>%
 
 ```{r}
 # Import data table with outcome categories and type of algorithm categories
-final_table_Oct26 <- read_csv("final_table_Oct26.csv") %>% 
+final_table_Oct26 <- read_csv("final_table_Oct26.csv") %>%
   mutate(participant_region_broad = if_else(str_detect(participant_region_broad, ","), "Multiple", participant_region_broad)) %>% 
   rename(`Participant region` = "participant_region_broad") %>% 
   mutate(`Participant region` = fct_relevel(`Participant region`, c("US", "Europe", "Asia", "Australia", "Middle East", "Multiple", "Unspecified"))) %>%
@@ -1387,13 +1374,17 @@ final_table_Oct26 <- read_csv("final_table_Oct26.csv") %>%
                             Method %in% c("Other", "case study", "correlational study", "model", "review", "participatory study design") ~ "other")) %>% 
   mutate(Method = fct_relevel(Method, c("experiment", "survey", "interviews", "mixed-methods", "other"))) %>% 
   mutate(Sample = if_else(str_detect(Sample, ","), "multiple", Sample)) %>% 
+  mutate(Sample=ifelse(Sample == "others", "general public", Sample)) %>% 
   mutate(Sample = fct_relevel(Sample, c("general public", "college students", "professional", "multiple"))) %>% 
   mutate(task_objectivity = fct_relevel(task_objectivity, c("Objective", "Subjective", "Combined"))) %>% 
    mutate(
          task_domain = if_else(str_detect(task_domain, "Memory tasks"), "Memory", task_domain)) %>% 
   mutate(task_domain = fct_relevel(task_domain, c("Classification", "Creative", "Customer Service", "Education", "Ethical", "Forecasting/Prediction", "Human Resources", "Legal", "Medical/Healthcare", "Memory", "Public Service", "Multiple", "Other"))) %>% 
   mutate(human_alternative = fct_relevel(human_alternative, c("Oneself", "Experts", "Laypeople", "Experts and Laypeople"))) %>% 
-  mutate(self_is_subject_of_decision = fct_relevel(self_is_subject_of_decision, c("Yes", "No")))
+  mutate(`Outcome Categories` = ifelse(`Outcome Categories` == "Emotional and Affective Responses", "Perceptions and Attitudes Toward Algorithms", `Outcome Categories`)) %>% 
+  mutate(`Outcome Categories` = fct_relevel(`Outcome Categories`, c("Behavioral Choices and Preferences", "Perceptions and Attitudes Toward Algorithms", "Trust and Ethical Evaluations", "Performance and Accuracy Metrics", "Multiple"))) %>% 
+  rename(`Algorithm Orientation` = "Algorithm_orientations") %>% 
+  mutate(`Type of algorithm categories` = fct_relevel(`Type of algorithm categories`, c("General AI/algorithm", "Decision-making models/systems/tools", "Task-specific models/systems/tools", "Generative AI", "Multiple", "Others (e.g., robots/chatbots/computers)")))
 # Merge year column of old data with FINAL data
 
 article_years <- final_table_classes %>% 
@@ -1402,10 +1393,390 @@ article_years <- final_table_classes %>%
 
 final_table_Oct26_years <- full_join(final_table_Oct26, article_years, by= c("first_author_last_name", "title")) %>% 
   filter(!is.na(`theory and key concepts`)) %>% 
-  relocate(Year, .before = "theory and key concepts")
+  relocate(Year, .before = "theory and key concepts")  
+
+# Edits
+final_table_Oct26_years[144, 22] = "Experts and Laypeople"
+final_table_Oct26_years[9, 19] = "Forecasting/Prediction"
+final_table_Oct26_years[9, 21] = "Apathy"
+final_table_Oct26_years[39, 21] = "Aversion"
+
+```
+
+```{r}
+# Cross-tabs for...
+
+# Orientation vs. outcome types
+final_table_Oct26_years %>%
+  tabyl(`Algorithm Orientation`, `Outcome Categories`) %>%
+  adorn_totals(where = c("row", "col")) %>% 
+  adorn_percentages("col") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position="front") %>% 
+  kbl(col.names = c("Algorithm\nOrientation", "Behavioral Choices", "Perceptions and Attitudes", "Trust/Ethical\nEvaluations", "Performance Metrics", "Multiple", "Total")) %>% 
+  add_header_above(c(" " = 1, "Outcome Type"=5, " "=1)) %>% 
+  # row_spec(row=5, bold = TRUE) %>% 
+  # column_spec(column=9, bold = TRUE) %>% 
+  kable_classic()
+```
+
+```{r}
+# Orientation vs. task objectivity 
+final_table_Oct26_years %>%
+  tabyl(`Algorithm Orientation`, task_objectivity) %>%
+  adorn_totals(where=c("row", "col")) %>% 
+  adorn_percentages("col") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position="front") %>% 
+  kbl(col.names = c("", "Objective", "Subjective", "Combined", "Total")) %>%
+  add_header_above(c(" " =1, "Task objectivity" = 3, " " =1)) %>% 
+  kable_classic()
+```
+
+```{r}
+# Orientation vs. sample 
+final_table_Oct26_years %>%
+  tabyl(`Algorithm Orientation`, Sample) %>%
+  adorn_totals(where=c("row", "col")) %>% 
+  adorn_percentages("col") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position="front") %>% 
+  kbl(col.names = c("Algorithm Orientation", "General Public", "College Students", "Professionals", "Multiple", "Total")) %>%
+  add_header_above(c(" "=1, "Sample" = 4, " " = 1)) %>%
+```
 
 
+```{r}
+kable_classic()
+```
+```{r}
+# Orientation vs. algorithm types 
+final_table_Oct26_years %>%
+  tabyl(`Algorithm Orientation`, `Type of algorithm categories`) %>%
+  adorn_totals(where=c("row", "col")) %>% 
+  adorn_percentages("col") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position="front") %>% 
+  kbl(col.names = c("Algorithm Orientation", "General algorithm", "Decision-making", "Task-specific", "Generative AI", "Multiple", "Others", "Total")) %>% 
+  add_header_above(c(" " =1, "Algorithm type" = 6, " " =1)) %>% 
+  kable_classic()
+```
+
+```{r}
+# Orientation vs. participant region
+final_table_Oct26_years %>%
+  tabyl(`Algorithm Orientation`, `Participant region`) %>%
+  adorn_totals(where=c("row", "col")) %>% 
+  adorn_percentages("col") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position="front") %>% 
+  kbl() %>% 
+  add_header_above(c(" " =1, "Participant region" = 7, " " =1)) %>% 
+  kable_classic()
+```
+```{r}
+# Orientation vs. region 
+final_table_Oct26_years %>%
+  tabyl(`Algorithm Orientation`, `Participant region`) %>%
+  adorn_totals(where=c("row", "col")) %>% 
+  adorn_percentages("col") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position="front") %>% 
+  kbl() %>%
+  add_header_above(c(" "=1, "Region" = 7, " " = 1)) %>% 
+  kable_classic()
+```
+
+```{r}
+# Orientation vs. human alternative
+
+final_table_Oct26_years %>%
+  tabyl(`Algorithm Orientation`, human_alternative) %>%
+  adorn_totals(where=c("row", "col")) %>% 
+  adorn_percentages("col") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position="front") %>% 
+  kbl() %>% 
+  add_header_above(c(" " =1, "Human alternative" = 4, " " =1)) %>% 
+  kable_classic()
+```
+
+```{r}
+# Orientation vs. task domain
+# 1st section
+final_table_Oct26_years %>%
+  tabyl(`Algorithm Orientation`, task_domain) %>%
+  adorn_totals(where=c("row", "col")) %>% 
+  adorn_percentages("col") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position="front") %>% 
+  kable(longtable = TRUE) %>% 
+  add_header_above(c(" " =1, "Task function" = 13, " " =1)) %>% 
+  remove_column(c(9:15)) %>% 
+  kable_classic() 
+
+# 2nd section
+
+final_table_Oct26_years %>%
+  tabyl(`Algorithm Orientation`, task_domain) %>%
+  adorn_totals(where=c("row", "col")) %>% 
+  adorn_percentages("col") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position="front") %>% 
+  kable(longtable = TRUE) %>% 
+  remove_column(c(2:8)) %>% 
+  add_header_above(c(" " =1, "Task function" = 6, " " =1)) %>% 
+  kable_classic() 
+
+# Orientation vs. Method 
+
+final_table_Oct26_years %>%
+  tabyl(`Algorithm Orientation`, Method) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  adorn_percentages("col") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position="front") %>%
+  kbl(col.names = c("", "Experiment", "Survey", "Interviews", "Mixed-methods", "Other", "Total"), linesep = "") %>%
+  add_header_above(c(" " = 1, "Method" = 5, " " = 1)) %>%
+  kable_classic()
+
+# Orientation vs. decision impact
+
+final_table_Oct26_years %>%
+  tabyl(`Algorithm Orientation`, self_is_subject_of_decision) %>%
+  adorn_totals(where=c("row", "col")) %>% 
+  adorn_percentages("col") %>%
+  adorn_pct_formatting(digits = 0) %>%
+  adorn_ns(position="front") %>% 
+  kbl(col.names = c("", "Yes", "No", "Total")) %>%
+  add_header_above(c(" " =1, "Decision impacts oneself" = 2, " " = 1)) %>% 
+  kable_classic()
+```
+
+```{r}
 # Make figures tracking patterns over time
 
+```
+
+```{r}
+cols_subset_figures = c("Participant region", "Method", "Sample", "task_domain", "task_objectivity", "human_alternative", "self_is_subject_of_decision")
+
+for (i in 1:length(cols_subset_figures)) {
+  #print(variable)
+  variable <- cols_subset_figures[i]
+
+test_list[[i]] <- final_table_Oct26_years %>% 
+  group_by(`Algorithm Orientation`) %>% 
+  count(!!sym(variable)) %>%
+  mutate(prop = n/sum(n)) %>% 
+  ggplot(aes(x=!!sym(variable), y=prop, fill=`Algorithm Orientation`)) +
+  geom_col() +
+  facet_wrap(~`Algorithm Orientation`) +
+  scale_fill_manual(values = c("#A11E22", "#E8A631","#E8C898", "lightblue")) +
+  ylim(c(0,1)) +
+  theme_light() +
+  theme(legend.position = "none",
+        axis.title = element_text(size=14),
+        panel.grid = element_blank(),
+        strip.text = element_text(size = 12),
+        axis.title.x = element_text(margin = margin(t=20)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0))) +
+  labs(x=format_variable_name(variable),
+       y = "Proportion of articles")
+
+}
+
+test_list[[5]]
+test_list[[3]]
+```
+```{r}
+final_table_Oct26_years %>% 
+  count(`Algorithm Orientation`) %>% 
+  mutate(prop=n/sum(n))
+
+final_table_Oct26_years %>% 
+  count(Method) %>% 
+  arrange(desc(n))
+
+final_table_Oct26_years %>% 
+  count(`Participant region`) %>% 
+  arrange(desc(n))
+
+final_table_Oct26_years %>% 
+  count(Sample) %>% 
+  mutate(prop = n/sum(n)) %>% 
+  arrange(desc(n))
+
+final_table_Oct26_years %>% 
+  count(task_domain) %>% 
+  mutate(prop = n/sum(n)) %>% 
+  arrange(desc(n))
+
+final_table_Oct26_years %>% 
+  count(task_objectivity) %>% 
+  mutate(prop = n/sum(n)) %>% 
+  arrange(desc(n))
+
+final_table_Oct26_years %>% 
+  count(human_alternative) %>% 
+  mutate(prop = n/sum(n)) %>% 
+  arrange(desc(n))
+
+final_table_Oct26_years %>% 
+  count(self_is_subject_of_decision) %>% 
+  mutate(prop = n/sum(n)) %>% 
+  arrange(desc(n))
+```
+```{r}
+final_table_Oct26_years %>% 
+  filter(`Algorithm Orientation` == "Apathy")
+```
+
+```{r}
+# Rates of algorithm aversion for each combination of human alternative and population subgroup
+
+aversion_human_factors <- final_table_Oct26_years %>% 
+  filter(Sample %in% c("professional", "general public", "college students")) %>% 
+  filter(human_alternative != "Experts and Laypeople") %>% 
+  group_by(Sample, human_alternative) %>% 
+  count(`Algorithm Orientation`) %>% 
+  mutate(aversion_rate=n/sum(n)) %>% 
+  filter(`Algorithm Orientation` == "Aversion")
+
+human_factors <- final_table_Oct26_years %>% 
+  filter(Sample %in% c("professional", "general public", "college students")) %>% 
+  filter(human_alternative != "Experts and Laypeople") %>% 
+  group_by(Sample) %>% 
+  count(human_alternative) %>% 
+  mutate(prop=n/sum(n)) 
+human_factors
+
+human_factors_by_aversion <- full_join(human_factors, aversion_human_factors, by=c("Sample", "human_alternative"))
+
+ggplot(human_factors_by_aversion, aes(x=Sample, y=prop, fill=aversion_rate)) +
+  geom_bar(stat="identity", position="fill") +
+  geom_text(aes(label = human_alternative), position = position_fill(vjust=0.5), color="white") +
+  coord_flip() +
+  theme_light() +
+  theme(panel.grid = element_blank()) +
+  labs(x="Participant subgroup",
+       y="Proportions of each type of human alternative") +
+  scale_fill_continuous(high = "#132B43", low = "#56B1F7")
+```
+
+```{r}
+# Make a similar figure but for tasks? Fill indicates the intensity of the orientation, but that doesn't really make sense
+orientation_by_tasks <- final_table_Oct26_years %>% 
+  group_by(task_domain) %>% 
+  count(`Algorithm Orientation`) %>% 
+  mutate(prop=n/sum(n)) %>% 
+  select(-n)
+
+domain_counts <- final_table_Oct26_years %>% 
+  count(task_domain) 
+
+mean(domain_counts$n)
+
+orientation_rates_by_task <- full_join(orientation_by_tasks, domain_counts, by=c("task_domain"))
+
+orientation_rates_by_task %>% 
+  filter(task_domain %in% c("Forecasting/Prediction", "Medical/Healthcare", "Human Resources", "Creative", "Ethical", "Education", "Customer Service", "Legal")) %>% 
+  ggplot(aes(x=fct_reorder(task_domain, n), y=n, fill=prop)) +
+  geom_col() +
+  coord_flip() +
+  facet_wrap(~`Algorithm Orientation`) +
+  theme_light() +
+  theme(panel.grid = element_blank()) +
+  labs(x="Task domain",
+       y="Number of articles",
+       fill=paste("Proportion of articles\nconcluding", `Algorithm Orientation`)) 
+
+```
+```{r}
+appreciation_tasks <- final_table_Oct26_years %>% 
+  group_by(task_domain) %>% 
+  count(`Algorithm Orientation`) %>% 
+  mutate(appreciation_rate=n/sum(n)) %>% 
+  filter(`Algorithm Orientation` == "Appreciation")
+
+appreciation_rates_by_task <- full_join(appreciation_tasks, domain_counts, by=c("task_domain"))
+
+appreciation_rates_by_task %>% 
+  filter(task_domain %in% c("Forecasting/Prediction", "Medical/Healthcare", "Human Resources", "Creative", "Customer Service")) %>%
+  ggplot(aes(x=fct_reorder(task_domain, n.y), y=n.y, fill=appreciation_rate)) +
+  geom_col() +
+  coord_flip() +
+  theme_light() +
+  theme(panel.grid = element_blank()) +
+  labs(x="Task domain",
+       y="Number of articles",
+       fill="Proportion of articles\nconcluding appreciation") +
+  scale_fill_continuous(high = "#E8A631", low = "#EEDBBD")
+```
+
+```{r}
+ambivalence_tasks <- final_table_Oct26_years %>% 
+  group_by(task_domain) %>% 
+  count(`Algorithm Orientation`) %>% 
+  mutate(ambivalence_rate=n/sum(n)) %>% 
+  filter(`Algorithm Orientation` == "Ambivalence")
+
+ambivalence_rates_by_task <- full_join(ambivalence_tasks, domain_counts, by=c("task_domain"))
+
+ambivalence_rates_by_task %>% 
+  filter(task_domain %in% c("Forecasting/Prediction", "Medical/Healthcare", "Human Resources", "Creative", "Ethical", "Classification")) %>% 
+  # filter(task_domain %in% c("Forecasting/Prediction", "Medical/Healthcare", "Human Resources", "Creative", "Ethical", "Education", "Customer Service", "Legal")) %>% 
+  ggplot(aes(x=fct_reorder(task_domain, n.y), y=n.y, fill=ambivalence_rate)) +
+  geom_col() +
+  coord_flip() +
+  theme_light() +
+  theme(panel.grid = element_blank()) +
+  labs(x="Task domain",
+       y="Number of articles",
+       fill="Proportion of articles\nconcluding ambivalence") +
+  scale_fill_continuous(high = "darkred", low = "#FFBEB2")
+```
+```{r}
+final_table_Oct26_years %>% 
+  drop_na(`Algorithm Orientation`) %>%
+  filter(task_domain != "Multiple") %>% 
+  ggplot(aes(x = fct_rev(fct_infreq(task_domain)))) +
+  geom_bar(aes(fill = `Algorithm Orientation`), position="stack") +
+  coord_flip() +
+  labs(x="Task function",
+       y="Number of articles in sample",
+       fill="Orientation", 
+       tag = "a)")+
+  theme_light() +
+  scale_fill_manual(
+                    values = c("#A11E22", "#E8A631","#E8C898", "lightblue")) +
+  theme(panel.grid = element_blank(),
+        legend.position = "top",
+        legend.key.spacing = unit(1, "mm"),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size=8),
+        axis.title = element_text(size=14),
+        axis.title.x = element_text(margin = margin(t=20)),
+        axis.title.y = element_text(margin = margin(r=20)))
+```
+```{r}
+final_table_Oct26_years %>% 
+  group_by(task_domain) %>% 
+  count(`Algorithm Orientation`) %>% 
+  mutate(prop = n/sum(n)) %>% 
+  filter(`Algorithm Orientation` == "Aversion") %>% 
+  filter(task_domain != "Multiple",
+         task_domain != "Other") %>% 
+  ggplot(aes(x=reorder(task_domain, prop), y=prop)) +
+  geom_col(fill="#A11E22") +
+  geom_hline(yintercept=.52, linetype=2, color="darkgray") +
+  coord_flip() +
+  theme_light() +
+  labs(x="Task function",
+       y="Proportion of articles concluding aversion",
+       tag = "b)") +
+  theme(axis.title = element_text(size=14),
+        axis.title.x = element_text(margin = margin(t=20)),
+        axis.title.y = element_text(margin = margin(r=20)))
 ```
 
