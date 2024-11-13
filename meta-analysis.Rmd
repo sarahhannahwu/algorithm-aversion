@@ -28,12 +28,13 @@ library(ggpubr)
 library(sjstats)
 library(janitor)
 library(rlang)
+library(magick)
 ```
 
 ## Import csv of coded search results
 
 ```{r}
-coded_articles <- read_csv("Inclusion_exclusion coding - mendeley_export.csv")
+# coded_articles <- read_csv("Inclusion_exclusion coding - mendeley_export.csv")
 ```
 
 ```{r}
@@ -1069,53 +1070,53 @@ final_table_Oct24_classes %>%
 ```
 
 ```{r}
-# Decision impact crosstab
-final_table_Oct24_classes %>%
-  tabyl(Algorithm_orientations, self_is_subject_of_decision) %>%
-  adorn_totals(where=c("row", "col")) %>% 
-  adorn_percentages("col") %>%
-  adorn_pct_formatting(digits = 0) %>%
-  adorn_ns(position="front") %>% 
-  kbl(col.names = c("", "Yes", "No", "Total")) %>%
-  add_header_above(c(" " =1, "Decision impacts oneself" = 2, " " = 1)) %>% 
-  kable_classic(html_font = "arial")
+# # Decision impact crosstab
+# final_table_Oct24_classes %>%
+#   tabyl(Algorithm_orientations, self_is_subject_of_decision) %>%
+#   adorn_totals(where=c("row", "col")) %>% 
+#   adorn_percentages("col") %>%
+#   adorn_pct_formatting(digits = 0) %>%
+#   adorn_ns(position="front") %>% 
+#   kbl(col.names = c("", "Yes", "No", "Total")) %>%
+#   add_header_above(c(" " =1, "Decision impacts oneself" = 2, " " = 1)) %>% 
+#   kable_classic(html_font = "arial")
 ```
 
 ```{r}
-final_table_Oct24_classes %>% 
-  count(journal_field) %>% 
-  ggplot(aes(x=fct_reorder(journal_field, n), y=n)) +
-  geom_col(fill="midnightblue") +
-  coord_flip() +
-  labs(x="Journal field",
-       y="Number of articles in sample") +
-  theme_light() +
-  theme(panel.grid = element_blank())
-
-final_table_Oct24_classes %>% 
-  count(journal_field) %>% 
-  arrange(desc(n)) %>% 
-  ggplot(aes(x=fct_reorder(journal_field, n), y=n)) +
-  geom_col(fill="midnightblue") +
-  coord_flip() +
-  labs(x="Journal field",
-       y="Number of articles in sample") +
-  theme_light() +
-  theme(panel.grid = element_blank())
+# final_table_Oct24_classes %>% 
+#   count(journal_field) %>% 
+#   ggplot(aes(x=fct_reorder(journal_field, n), y=n)) +
+#   geom_col(fill="midnightblue") +
+#   coord_flip() +
+#   labs(x="Journal field",
+#        y="Number of articles in sample") +
+#   theme_light() +
+#   theme(panel.grid = element_blank())
+# 
+# final_table_Oct24_classes %>% 
+#   count(journal_field) %>% 
+#   arrange(desc(n)) %>% 
+#   ggplot(aes(x=fct_reorder(journal_field, n), y=n)) +
+#   geom_col(fill="midnightblue") +
+#   coord_flip() +
+#   labs(x="Journal field",
+#        y="Number of articles in sample") +
+#   theme_light() +
+#   theme(panel.grid = element_blank())
 ```
 
 ```{r}
-final_table_Oct24_classes %>% 
-  count(participant_region_broad) %>%
-  ggplot(aes(x=fct_reorder(participant_region_broad, n), y=n)) +
-  geom_col(fill="midnightblue") +
-  coord_flip() +
-  labs(x="Participant region",
-       y="Number of articles in sample") +
-  theme_light() +
-  theme(axis.title = element_text(size =14),
-        panel.grid = element_blank()) 
-```
+# final_table_Oct24_classes %>% 
+#   count(participant_region_broad) %>%
+#   ggplot(aes(x=fct_reorder(participant_region_broad, n), y=n)) +
+#   geom_col(fill="midnightblue") +
+#   coord_flip() +
+#   labs(x="Participant region",
+#        y="Number of articles in sample") +
+#   theme_light() +
+#   theme(axis.title = element_text(size =14),
+#         panel.grid = element_blank()) 
+# ```
 
 ```{r}
 # Human alternatives for each orientation
@@ -1417,7 +1418,8 @@ final_table_Oct26_years %>%
   add_header_above(c(" " = 1, "Outcome Type"=5, " "=1)) %>% 
   # row_spec(row=5, bold = TRUE) %>% 
   # column_spec(column=9, bold = TRUE) %>% 
-  kable_classic()
+  kable_classic() %>% 
+  save_kable("orientations_outcomes.png")
 ```
 
 ```{r}
@@ -1740,6 +1742,7 @@ ambivalence_rates_by_task %>%
 final_table_Oct26_years %>% 
   drop_na(`Algorithm Orientation`) %>%
   filter(task_domain != "Multiple") %>% 
+  mutate(`Algorithm Orientation` = fct_relevel(`Algorithm Orientation`, c("Apathy", "Ambivalence", "Appreciation", "Aversion"))) %>% 
   ggplot(aes(x = fct_rev(fct_infreq(task_domain)))) +
   geom_bar(aes(fill = `Algorithm Orientation`), position="stack") +
   coord_flip() +
@@ -1749,6 +1752,8 @@ final_table_Oct26_years %>%
        tag = "a)")+
   theme_light() +
   scale_fill_manual(
+                    breaks=c('Aversion', 'Appreciation', 'Ambivalence', "Apathy"),
+                    labels=c("Aversion", "Appreciation", "Ambivalence", "Apathy"),
                     values = c("#A11E22", "#E8A631","#E8C898", "lightblue")) +
   theme(panel.grid = element_blank(),
         legend.position = "top",
@@ -1777,6 +1782,27 @@ final_table_Oct26_years %>%
        tag = "b)") +
   theme(axis.title = element_text(size=14),
         axis.title.x = element_text(margin = margin(t=20)),
-        axis.title.y = element_text(margin = margin(r=20)))
+        axis.title.y = element_text(margin = margin(r=20)),
+        panel.grid = element_blank())
+```
+
+```{r}
+main_table <- read_csv("main_table.csv", skip = 1)
+
+pdf("main_table_10.31.pdf", width=11, height = 8.5)
+
+
+kable(main_table) %>% 
+  add_header_above(c("General" = 2, 
+                     "Study Characteristics" = 3, 
+                     "Human Factors" = 3, 
+                     "Algorithm Factors" = 1, 
+                     "Task Factors" = 2, 
+                     "Outcome Factors" = 2, 
+                     "Findings" = 2)) %>% 
+  kable_classic() %>% 
+  save_kable("kable_table.pdf")
+
+                     
 ```
 
