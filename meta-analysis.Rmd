@@ -22,24 +22,46 @@ You can also embed plots, for example:
 ```{r}
 
 #name data file and read in .csv 
-dat1 <- read.csv("SC sample data.csv")
+dat1 <- read.csv("meta-analysis-data.csv") 
+dat1[226, 4] = 0
+dat1[218, 4] = 0
+dat1[206, 10] = -738
+dat1[206, 11] = 4112
+dat1[206, 13] = -658
+dat1[206, 14] = 3397
+
+included_in_meta_analysis <- dat1 %>% 
+  filter(Involved==1) %>% 
+  filter(first_author_last_name != "Freisinger") %>% 
+  filter(first_author_last_name != "Millet") %>% 
+  unite(col = "Study", c("first_author_last_name", "Substudy"), sep = "_") 
+
+cols.num <- c("human_mean","human_sd", "algorithm_mean", "algorithm_sd")
+included_in_meta_analysis[cols.num] <- sapply(included_in_meta_analysis[cols.num],as.numeric)
+sapply(included_in_meta_analysis, class)
+
 #calculate overall effect size, in this case standardized mean difference (Hedges g), and variance. 
-dat1 <- escalc(measure="SMD", m1i=intmean, sd1i=intsd, n1i=intn,
-               m2i=cmean, sd2i=csd, n2i=cn, data=dat1)
+overall_effect_size <- escalc(measure="SMD", m1i=human_mean, sd1i=human_sd, n1i=human_n,
+               m2i=algorithm_mean, sd2i=algorithm_sd, n2i=algorithm_n, data=included_in_meta_analysis) %>% 
+  select(-c(16:43))
 #display dataset with effect size and variance
-dat1
+overall_effect_size
 
-
-
+#reverse score studies by Bonezzi, Longoni 1a-6c 
+reverse_coded <- overall_effect_size %>% 
+  mutate(yi = if_else(Article.ID_New == 153, yi*(-1), yi)) %>% 
+  mutate(yi = if_else(Article.ID_New == 54, yi*(-1), yi))
 ##########analyses
 
 #run overall random effects meta-analysis
-overallresult <- rma(yi, vi, data=dat1)
+overallresult <- rma(yi, vi, data=reverse_coded)
 #display overall result
 overallresult
 
 #forest plot
-forest.rma(overallresult, slab = dat1$studyauthor, header="Study")
+forest.rma(overallresult, slab = reverse_coded$Study, header="Study")
+
+# for papers where DV was a sliding scale from human to AI, maybe use midpoint and find z-score to standardize
 
 
 ##check for influence
