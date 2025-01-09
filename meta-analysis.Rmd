@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(dplyr)
 library(metafor)
+library(clubSandwich)
 ```
 
 ## Including Plots
@@ -20,55 +21,226 @@ library(metafor)
 You can also embed plots, for example:
 
 ```{r}
-
+# import data file from ICA 2024
+# Jinxu tab in 1029-MATA-DATA sheet
+ICA_2024 <- read_csv("ICA_2024.csv") %>% 
+  select(number, `First Author Last Name`, `Article name`, Substudy, Study, predictor, `Outcome variable 1
+(Weight on advice - algo appreciate)`)
+# import ICA 2025 systematic review table for other variables
+systematic_review <- read_csv("systematic_review_table.csv")
 #name data file and read in .csv 
 dat1 <- read.csv("meta-analysis-data.csv") 
+#fix cells of data file
 dat1[226, 4] = 0
 dat1[218, 4] = 0
 dat1[206, 10] = -738
 dat1[206, 11] = 4112
 dat1[206, 13] = -658
 dat1[206, 14] = 3397
+```
 
+```{r}
+# typos
+typos <- c("advior", "psychologicst")
+corrections <- c("advisor", "psychologist")
+
+# join Jinxu's simplified meta-analysis data with the more comprehensive data file
+ICA_2024_full <- full_join(ICA_2024, SMD.Data, by="number") %>% 
+  select(-c(X, X.1)) %>% 
+  rename("first_author_last_name" = "First Author Last Name",
+         "title" = "Article name",
+         "DV" = "Outcome variable 1
+(Weight on advice - algo appreciate)",
+         "human_mean" = "humanmean",
+         "human_sd" = "humansd",
+         "human_n" = "humanN",
+         "algorithm_mean" = "AImean",
+         "algorithm_sd" = "AISD",
+         "algorithm_n" = "AIN") %>% 
+  fill(first_author_last_name,
+       title,
+       Substudy,
+       Study) %>% 
+# correct typos
+  mutate(predictor = str_replace_all(predictor, "advior", "advisor")) %>% 
+  mutate(predictor = str_replace_all(predictor, "psychologicst", "psychologist")) %>% 
+# correc author names
+  mutate(first_author_last_name = if_else(title == "Who is the Expert? Reconciling Algorithm Aversion and Algorithm Appreciation in AI-Supported Decision Making", "Hou", first_author_last_name)) %>% 
+  mutate(first_author_last_name = if_else(title == "Algorithm appreciation or aversion? Comparing in-service and pre-service teachers’ acceptance of computerized expert models", "Kaufmann", first_author_last_name))
+```
+
+```{r}
+# try escalc for ICA 2024 data
+ICA_2024_effect_size <- escalc(measure="SMD", m1i=human_mean, sd1i=human_sd, n1i=human_n,
+               m2i=algorithm_mean, sd2i=algorithm_sd, n2i=algorithm_n, data=ICA_2024_full) 
+```
+
+
+```{r}
 included_in_meta_analysis <- dat1 %>% 
   filter(Involved==1) %>% 
   filter(first_author_last_name != "Freisinger") %>% 
   filter(first_author_last_name != "Millet") %>% 
-  unite(col = "Study", c("first_author_last_name", "Substudy"), sep = "_") 
+  mutate(title = str_to_title(title))
 
+
+# combine with data from systematic review
+meta_analysis_with_moderators <- left_join(included_in_meta_analysis, systematic_review, by = c("first_author_last_name", "title")) %>% 
+  rename("outcome_variable" = "Outcome.variable.1..Weight.on.advice...algo.appreciate.") %>% 
+  rename("Method" = "Method.y") %>% 
+  select(Article.ID_New, first_author_last_name, title, Substudy, Sample.size, predictor, outcome_variable, Operationalization, human_mean, human_sd, human_n, algorithm_mean, algorithm_sd, algorithm_n, Female, Age_Mean, year, Method) %>% 
+  fill(year) %>% 
+  fill(Method) 
+```
+
+
+```{r}
 cols.num <- c("human_mean","human_sd", "algorithm_mean", "algorithm_sd")
-included_in_meta_analysis[cols.num] <- sapply(included_in_meta_analysis[cols.num],as.numeric)
-sapply(included_in_meta_analysis, class)
+meta_analysis_with_moderators[cols.num] <- sapply(meta_analysis_with_moderators[cols.num],as.numeric)
+sapply(meta_analysis_with_moderators, class)
 
 #calculate overall effect size, in this case standardized mean difference (Hedges g), and variance. 
 overall_effect_size <- escalc(measure="SMD", m1i=human_mean, sd1i=human_sd, n1i=human_n,
-               m2i=algorithm_mean, sd2i=algorithm_sd, n2i=algorithm_n, data=included_in_meta_analysis) %>% 
-  select(-c(16:43))
+               m2i=algorithm_mean, sd2i=algorithm_sd, n2i=algorithm_n, data=meta_analysis_with_moderators) 
 #display dataset with effect size and variance
 overall_effect_size
 
 #reverse score studies by Bonezzi, Longoni 1a-6c 
-reverse_coded <- overall_effect_size %>% 
+ICA_2025 <- overall_effect_size %>% 
   mutate(yi = if_else(Article.ID_New == 153, yi*(-1), yi)) %>% 
-  mutate(yi = if_else(Article.ID_New == 54, yi*(-1), yi))
+  mutate(yi = if_else(Article.ID_New == 54, yi*(-1), yi)) %>% 
+  mutate(number = 63:124) %>% 
+  rename("female" = "Female",
+         "age" = "Age_Mean",
+         "DV" = "outcome_variable") %>% 
+  mutate(female = as.numeric(female),
+         age = as.numeric(age))
+```
+
+```{r}
+# Bind rows to join ICA 2024 data with ICA 2025 data
+all_effects <- bind_rows(ICA_2024_effect_size, ICA_2025, .id="number") %>% 
+  filter(first_author_last_name != "Allen, Ryan T") %>%  # exclude article with irrelevant DV
+  mutate(number = 1:123) %>%
+  rename("effect_id" = "number") %>% 
+  relocate(Operationalization, .after = "DV") %>% 
+  select(-Article.ID_New) %>% 
+  mutate(study_id = as.integer(factor(title))) %>%
+  mutate(study_id = match(title, unique(title))) %>% 
+  relocate(study_id, .after = effect_id)
+
+write_csv(all_effects, "all_effects.csv")
+
+# check and fix the numbers descriptives for Logg. something looks wrong...
+
+all_effects[4, 10] = 154
+all_effects[4, 11] = 0.35
+all_effects[4, 12] = 0.36
+all_effects[4, 13] = 51
+all_effects[4, 14] = 0.50
+all_effects[4, 15] = 0.37
+all_effects[4, 16] = 51
+
+# fix SDs for Sharan study. Right now it has SEs
+
+all_effects <- all_effects %>% 
+  mutate(human_sd = if_else(effect_id == 27, .91, human_sd)) %>% 
+  mutate(algorithm_sd = ifelse(effect_id == 27, .97, algorithm_sd))
+
+write_csv(all_effects, "all_effects.csv")
+# fix SDs for Commerford. Right now it has SEs. Also, for now use overall Proposed DV
+all_effects_12.16.24 <- read_csv("all_effects_12.16.24.csv")
+
+
+
+```
+
+
+```{r}
 ##########analyses
+# Uncomment to mutate df 
+# unite(col = "Study", c("first_author_last_name", "year", "Substudy"), sep = "_")
 
 #run overall random effects meta-analysis
-overallresult <- rma(yi, vi, data=reverse_coded)
+overallresult <- rma(yi, vi, data=all_effects)
 #display overall result
 overallresult
 
 #forest plot
-forest.rma(overallresult, slab = reverse_coded$Study, header="Study")
+# forest.rma(overallresult, slab = all_effects$Substudy, header="Study", order = "obs")
 
 # for papers where DV was a sliding scale from human to AI, maybe use midpoint and find z-score to standardize
+```
+
+```{r}
+# Use robust variance estimation
+m_multi <- rma.mv(yi = yi, V = vi, random = list(~1 | effect_id, ~1 | study_id), data = all_effects)
+m_multi
+
+# One effect per substudy
+one_effect_per_substudy <- all_effects_12.16.24 %>% 
+  group_by(title, Substudy) %>% 
+  slice_head(n=1) %>% 
+  mutate(Substudy = str_to_upper(Substudy)) %>% 
+  unite(col = "Study", c("first_author_last_name", "year", "Substudy"), sep = ", ") %>% 
+  filter(effect_id != 61)
+
+one_effect_per_substudy_result <- rma(yi, vi, data=one_effect_per_substudy)
+
+forest.rma(one_effect_per_substudy_result, slab = one_effect_per_substudy$Study, header = "Study", order="obs")
+
+rve <- rma.mv(yi = yi, V = vi, random = list(~1 | effect_id, ~1 | study_id), data = one_effect_per_substudy)
+rve
+
+forest.rma(rve, slab = one_effect_per_substudy$Study, header = "Study", order = "obs")
+
+```
+
+```{r}
+# titles must be exactly the same in the two data files, otherwise the join won't work. So make sure the case and punctuation are exactly the same for all titles
+systematic_review <- read_csv("systematic_review_table.csv") %>% 
+  mutate(title = str_to_title(title),
+         title = str_remove(title, "\\."),
+         title = str_replace(title, " – ", ": ")) 
+all_effects_moderators <- read_csv("all_effects_moderators_1.8.25.csv") %>% 
+  mutate(title = str_to_title(title), 
+        title = str_remove(title, "\\."),
+        title = str_replace(title, "—", ": "))
+
+# Check the way the algorithm was framed to participants
+all_effects_vars <- left_join(all_effects_moderators, systematic_review, by = "title") %>% 
+  mutate(within_between_design = if_else(Sample.size == human_n & Sample.size == algorithm_n, "within", "between")) %>% 
+  relocate(human_alternative, .after = predictor) %>% 
+  select(-c(Year, journal_field, `If other, specify method`, Method.y, N, first_author_last_name.y)) %>% 
+  mutate(Substudy = str_to_lower(Substudy)) %>% 
+  rename(first_author_last_name = first_author_last_name.x,
+         method = Method.x,
+         algorithm_category = `Type of algorithm categories`) %>% 
+  mutate(first_author_last_name = if_else(title == "Online Dating Meets Artificial Intelligence: How The Perception Of Algorithmically Generated Profile Text Impacts Attractiveness And Trust", "Wu, Y", first_author_last_name)) %>% 
+  mutate(first_author_last_name = if_else(title == "Acceptance Of Medical Treatment Regimens Provided By Ai Vs Human", "Wu, J", first_author_last_name)) %>% 
+  mutate(title = str_replace_all(title, "Ai", "AI")) %>% 
+  relocate(task_objectivity, .after = objective) %>% 
+  relocate(algorithm_category, .after = tech_function) %>% 
+  relocate(task_domain, .after = domain) %>% 
+  mutate(objective = if_else(task_objectivity == "Objective", 1, objective),
+         objective = if_else(task_objectivity == "Subjective", 2, objective)) %>% 
+  mutate(effect_id = 1:n())
 
 
+# Since each row in the meta-analysis represents a single effect size, go back to the columns from the systematic review that are coded at the paper level and replace those values with the values from the substudy
+
+
+```
+
+```{r}
 ##check for influence
 #influence analysis
-influence(overallresult)
+influence(one_effect_per_substudy_result)
+#Logg et al. 2019 Study 2, Kaufmann et al. 2021 Study 2, and Commerford et al. 2021 Study 1
+```
 
 
+```{r}
 ##categorical moderator
 
 #moderator test to calculate qbetween value for categorical moderator
