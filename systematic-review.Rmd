@@ -994,31 +994,8 @@ final_table_Oct24_classes %>%
 ```
 
 ```{r}
-orientations_by_sample <- table(final_table_Oct24_classes$Algorithm_orientations, final_table_Oct24_classes$Sample)
-orientations_by_sample %>% 
-  kbl() %>% 
-  kable_paper()
 
-# Create a contingency table
-contingency_table <- table(final_table_Oct24_classes$Algorithm_orientations, final_table_Oct24_classes$Sample)
-
-# Calculate percentages
-percentage_table <- prop.table(contingency_table) * 100
-
-# Combine frequency and percentage
-formatted_table <- paste(contingency_table, " (", round(percentage_table, 1), "%)", sep = "")
-
-# Convert to a matrix for better display
-formatted_matrix <- matrix(formatted_table, nrow = nrow(contingency_table), byrow = TRUE)
-rownames(formatted_matrix) <- rownames(contingency_table)
-colnames(formatted_matrix) <- colnames(contingency_table)
-
-# Print the formatted contingency table
-formatted_matrix %>% 
-  kbl() %>% 
-  kable_paper()
-
-# Use Janitor package to make the same table
+# Use Janitor package to make table
 final_table_Oct24_classes %>%
   tabyl(Algorithm_orientations, Sample) %>%
   adorn_totals(where = c("row", "col")) %>% 
@@ -1118,26 +1095,26 @@ final_table_Oct24_classes %>%
 #         panel.grid = element_blank()) 
 # ```
 
-```{r}
-# Human alternatives for each orientation
-
-final_table_Oct26_years %>% 
-  group_by(`Algorithm Orientation`) %>% 
-  count(human_alternative) %>% 
-  mutate(prop = n/sum(n)) %>% 
-  ggplot(aes(x=human_alternative, y=prop, fill=`Algorithm Orientation`)) +
-  geom_col() +
-  facet_wrap(~`Algorithm Orientation`) +
-  labs(x="Human alternative",
-       y= "Proportion of articles") +
-  scale_fill_manual(values = c("#A11E22", "#E8A631","#E8C898", "lightblue")) +
-  theme_light() +
-  theme(legend.position = "none",
-        axis.title = element_text(size=14),
-        panel.grid = element_blank(),
-        strip.text = element_text(size = 12),
-        axis.title.x = element_text(margin = margin(t=20)),
-        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
+# ```{r}
+# # Human alternatives for each orientation
+# 
+# final_table_Oct26_years %>% 
+#   group_by(`Algorithm Orientation`) %>% 
+#   count(human_alternative) %>% 
+#   mutate(prop = n/sum(n)) %>% 
+#   ggplot(aes(x=human_alternative, y=prop, fill=`Algorithm Orientation`)) +
+#   geom_col() +
+#   facet_wrap(~`Algorithm Orientation`) +
+#   labs(x="Human alternative",
+#        y= "Proportion of articles") +
+#   scale_fill_manual(values = c("#A11E22", "#E8A631","#E8C898", "lightblue")) +
+#   theme_light() +
+#   theme(legend.position = "none",
+#         axis.title = element_text(size=14),
+#         panel.grid = element_blank(),
+#         strip.text = element_text(size = 12),
+#         axis.title.x = element_text(margin = margin(t=20)),
+#         axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
 ```
 
 
@@ -1789,8 +1766,7 @@ final_table_Oct26_years %>%
 ```
 
 ```{r}
-main_table <- read_csv("main_table.csv", skip = 1)
-
+main_table <- read_csv("main_table.csv", skip = 1) 
 pdf("main_table_10.31.pdf", width=11, height = 8.5)
 
 
@@ -1818,5 +1794,51 @@ final_table_Oct26_years %>%
   ggplot(aes(x=Year, y=prop, color=`Algorithm Orientation`, group = `Algorithm Orientation`)) +
   geom_line() +
   geom_point()
+```
+
+```{r}
+
+cols_subset = c("Type of algorithm categories", "Outcome Categories")
+test_list_1 <- list()
+
+
+#this works (ish):
+for (i in 1:length(cols_subset)) {
+  #print(variable)
+  variable <- cols_subset[i]
+
+test_list_1[[i]] <- final_table_Oct26_years %>%
+  rename("algorithm_orientation" = "Algorithm Orientation") %>% 
+  group_by(algorithm_orientation) %>% 
+  count(!!sym(variable)) %>%
+  mutate(prop = n/sum(n)) %>% 
+  ggplot(aes(x=!!sym(variable), y=prop, fill=algorithm_orientation)) +
+  geom_col() +
+  facet_wrap(~algorithm_orientation) +
+  scale_fill_manual(values = c("#A11E22", "#E8A631","#E8C898", "lightblue")) +
+  ylim(c(0,1)) +
+  theme_light() +
+  theme(legend.position = "none",
+        axis.title = element_text(size=14),
+        panel.grid = element_blank(),
+        strip.text = element_text(size = 12),
+        axis.title.x = element_text(margin = margin(t=20)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0))) +
+  labs(x=format_variable_name(variable),
+       y = "Proportion of articles")
+
+}
+test_list_1[1]
+test_list_1[2] 
+test_list_1[3]
+test_list_1[4]
+test_list_1[5]
+test_list_1[6]
+test_list_1[7]
+
+```
+
+```{r}
+write_csv(final_table_Oct26_years, "systematic_review_table.csv")
 ```
 
