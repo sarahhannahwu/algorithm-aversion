@@ -1,0 +1,45 @@
+---
+title: "supplementary"
+output: html_document
+date: "2024-11-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+library(tidyverse)
+library(dplyr)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+DK <- read_csv("Data_DK.csv") %>% 
+  select(Trust_human, Trust_AI, Uniqueness_Human, Uniquenesss_AI)
+FR <- read_csv("Data_FR.csv") %>% 
+  select(Trust_human, Trust_AI, Uniqueness_Human, Uniquenesss_AI)
+
+both_countries <- bind_rows(DK, FR)
+
+# Summary stats
+summary_stats <- both_countries %>% 
+  summarize(mean_trust_human = mean(Trust_human, na.rm = TRUE),
+            sd_trust_human = sd(Trust_human, na.rm = TRUE),
+            n_human = n(),
+            mean_trust_AI = mean(Trust_AI, na.rm = TRUE),
+            sd_trust_AI = sd(Trust_AI, na.rm = TRUE))
+
+# For some reason this gives 1168 rows, whereas in the paper there are 1068
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
