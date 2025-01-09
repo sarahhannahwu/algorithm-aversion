@@ -229,6 +229,8 @@ all_effects_vars <- left_join(all_effects_moderators, systematic_review, by = "t
 
 # Since each row in the meta-analysis represents a single effect size, go back to the columns from the systematic review that are coded at the paper level and replace those values with the values from the substudy
 
+# Also fill in empty Operationalization cells
+write_csv(all_effects_vars, "all_effects_vars.csv")
 
 ```
 
