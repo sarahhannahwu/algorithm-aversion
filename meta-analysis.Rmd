@@ -231,6 +231,10 @@ all_effects_vars <- left_join(all_effects_moderators, systematic_review, by = "t
 
 # Also fill in empty Operationalization cells
 write_csv(all_effects_vars, "all_effects_vars.csv")
+# SW working in Google Sheet to fill these in
+
+# import filled in data sheet
+all_effects_moderators <- read_csv("all_effects_moderators_1.13.25.csv")
 
 ```
 
