@@ -14,6 +14,7 @@ library(tidyverse)
 library(dplyr)
 library(metafor)
 library(clubSandwich)
+
 ```
 
 ## Including Plots
@@ -236,12 +237,59 @@ write_csv(all_effects_vars, "all_effects_vars.csv")
 # import filled in data sheet
 all_effects_moderators <- read_csv("all_effects_moderators_1.13.25.csv")
 
+# edited outcomes categories column to replace "Multiple" with the specific outcome category for that effect size
+```
+
+```{r}
+# Nested effect sizes
+nested_mod <- rma.mv(yi = yi,
+                     V = vi,
+                     data = all_effects_moderators,
+                     random = ~1|study_id/effect_id,
+                     method = "REML",
+                     test = "t",
+                     dfs = "contain",
+                     mods = ~factor(expert, objective, paradigm))
+summary(nested_mod)
+```
+
+
+```{r}
+
+# Dummy-code the objectivity moderator column, create three columns for objective or not, subjective or not, combined or not. Each would be entered as a moderator
+dummy_coded <- all_effects_moderators %>% 
+  mutate(objective_yn = if_else(objective == 1, 1, 0)) %>% 
+  mutate(subjective_yn = if_else(objective == 2, 1, 0)) %>% 
+  mutate(combined_yn = if_else(objective == 3, 1, 0))
+
+# Separate data by DV, then do a multiple test correction. 
+# divide alpha by number of separations
+# Bonferroni correction
+
+dummy_coded %>% 
+  count(DV) %>% 
+  arrange(desc(n)) %>% 
+  print(n=59)
+# 
+# clean_DVs <- dummy_coded %>% 
+#   mutate(DV_concept = if_else(DV == regex("^algorithm appreciate$"), "weight on advice", DV)) %>% 
+#   mutate(DV_concept = if_else(str_detect(DV, regex("weight on advice", ignore_case = TRUE)), "weight on advice", DV)) %>% 
+#   relocate(DV_concept, .after = DV)
+
+
+# report variance of differences grouped by substudies
+
+```
+```{r}
+# moderator analyses
+
+# model that takes into account 
 ```
 
 ```{r}
 ##check for influence
 #influence analysis
-influence(one_effect_per_substudy_result)
+influence(nested_mod)
 #Logg et al. 2019 Study 2, Kaufmann et al. 2021 Study 2, and Commerford et al. 2021 Study 1
 ```
 
