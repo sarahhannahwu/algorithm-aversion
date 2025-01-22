@@ -241,6 +241,51 @@ all_effects_moderators <- read_csv("all_effects_moderators_1.13.25.csv")
 ```
 
 ```{r}
+all_effects_moderators_subset <- all_effects_moderators %>% 
+  select(effect_id, study_id, first_author_last_name, title, Substudy, human_mean, algorithm_mean, human_sd, algorithm_sd, human_n, algorithm_n)
+
+es_from_mean_sd <- metafor::escalc(measure = "SMD", 
+                          vtype="LS", 
+                          m1i = human_mean,           
+                          m2i = algorithm_mean, 
+                          sd1i = human_sd,
+                          sd2i = algorithm_sd, 
+                          n1i = human_n, 
+                          n2i = algorithm_n,
+                          data = all_effects_moderators_subset,
+                          slab = effect_id)  
+
+es_correct_directions <- es_from_mean_sd %>% 
+  mutate(yi = if_else(effect_id %in% c(29, 65:71, 89:96), yi*(-1), yi))
+
+main_model <- rma.mv(yi = yi, 
+                     V = vi, 
+                     data = es_correct_directions, 
+                     tdist=TRUE, 
+                     method = "REML",         
+                     level = 95, 
+                     digits = 7, 
+                     slab = effect_id, 
+                     random = ~ 1 | study_id/Substudy/effect_id)   
+
+main_model_robust <- robust(main_model, cluster = study_id, clubSandwich=TRUE)
+
+print(summary(main_model_robust))
+```
+```{r}
+# Forest plot of all effect sizes
+forest(main_model_robust,
+       annotate=FALSE,
+       slab = NA,
+       order = "obs",
+       col = "salmon",
+       xlab = "Effect sizes (Hedge’s g) and 95% confidence intervals",
+       cex.axis = .75,
+       efac = 2)
+```
+
+
+```{r}
 # Nested effect sizes
 nested_mod <- rma.mv(yi = yi,
                      V = vi,
