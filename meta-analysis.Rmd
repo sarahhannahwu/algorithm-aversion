@@ -17,11 +17,10 @@ library(clubSandwich)
 
 ```
 
-## Including Plots
+## Import Data
 
-You can also embed plots, for example:
 
-```{r}
+```{r, eval=FALSE}
 # import data file from ICA 2024
 # Jinxu tab in 1029-MATA-DATA sheet
 ICA_2024 <- read_csv("ICA_2024.csv") %>% 
@@ -40,7 +39,7 @@ dat1[206, 13] = -658
 dat1[206, 14] = 3397
 ```
 
-```{r}
+```{r, eval=FALSE}
 # typos
 typos <- c("advior", "psychologicst")
 corrections <- c("advisor", "psychologist")
@@ -70,14 +69,14 @@ ICA_2024_full <- full_join(ICA_2024, SMD.Data, by="number") %>%
   mutate(first_author_last_name = if_else(title == "Algorithm appreciation or aversion? Comparing in-service and pre-service teachers’ acceptance of computerized expert models", "Kaufmann", first_author_last_name))
 ```
 
-```{r}
+```{r, eval=FALSE}
 # try escalc for ICA 2024 data
 ICA_2024_effect_size <- escalc(measure="SMD", m1i=human_mean, sd1i=human_sd, n1i=human_n,
                m2i=algorithm_mean, sd2i=algorithm_sd, n2i=algorithm_n, data=ICA_2024_full) 
 ```
 
 
-```{r}
+```{r, eval=FALSE}
 included_in_meta_analysis <- dat1 %>% 
   filter(Involved==1) %>% 
   filter(first_author_last_name != "Freisinger") %>% 
@@ -95,7 +94,7 @@ meta_analysis_with_moderators <- left_join(included_in_meta_analysis, systematic
 ```
 
 
-```{r}
+```{r, eval=FALSE}
 cols.num <- c("human_mean","human_sd", "algorithm_mean", "algorithm_sd")
 meta_analysis_with_moderators[cols.num] <- sapply(meta_analysis_with_moderators[cols.num],as.numeric)
 sapply(meta_analysis_with_moderators, class)
@@ -118,7 +117,7 @@ ICA_2025 <- overall_effect_size %>%
          age = as.numeric(age))
 ```
 
-```{r}
+```{r, eval=FALSE}
 # Bind rows to join ICA 2024 data with ICA 2025 data
 all_effects <- bind_rows(ICA_2024_effect_size, ICA_2025, .id="number") %>% 
   filter(first_author_last_name != "Allen, Ryan T") %>%  # exclude article with irrelevant DV
@@ -149,6 +148,10 @@ all_effects <- all_effects %>%
   mutate(algorithm_sd = ifelse(effect_id == 27, .97, algorithm_sd))
 
 write_csv(all_effects, "all_effects.csv")
+```
+
+
+```{r}
 # fix SDs for Commerford. Right now it has SEs. Also, for now use overall Proposed DV
 all_effects_12.16.24 <- read_csv("all_effects_12.16.24.csv")
 
@@ -157,15 +160,15 @@ all_effects_12.16.24 <- read_csv("all_effects_12.16.24.csv")
 ```
 
 
-```{r}
+```{r, eval=FALSE}
 ##########analyses
 # Uncomment to mutate df 
 # unite(col = "Study", c("first_author_last_name", "year", "Substudy"), sep = "_")
 
 #run overall random effects meta-analysis
-overallresult <- rma(yi, vi, data=all_effects)
-#display overall result
-overallresult
+# overallresult <- rma(yi, vi, data=all_effects)
+# #display overall result
+# overallresult
 
 #forest plot
 # forest.rma(overallresult, slab = all_effects$Substudy, header="Study", order = "obs")
@@ -173,7 +176,7 @@ overallresult
 # for papers where DV was a sliding scale from human to AI, maybe use midpoint and find z-score to standardize
 ```
 
-```{r}
+```{r, eval=FALSE}
 # Use robust variance estimation
 m_multi <- rma.mv(yi = yi, V = vi, random = list(~1 | effect_id, ~1 | study_id), data = all_effects)
 m_multi
@@ -197,7 +200,7 @@ forest.rma(rve, slab = one_effect_per_substudy$Study, header = "Study", order = 
 
 ```
 
-```{r}
+```{r, eval=FALSE}
 # titles must be exactly the same in the two data files, otherwise the join won't work. So make sure the case and punctuation are exactly the same for all titles
 systematic_review <- read_csv("systematic_review_table.csv") %>% 
   mutate(title = str_to_title(title),
@@ -210,7 +213,7 @@ all_effects_moderators <- read_csv("all_effects_moderators_1.8.25.csv") %>%
 
 # Check the way the algorithm was framed to participants
 all_effects_vars <- left_join(all_effects_moderators, systematic_review, by = "title") %>% 
-  mutate(within_between_design = if_else(Sample.size == human_n & Sample.size == algorithm_n, "within", "between")) %>% 
+  mutate(within_between_design = if_else(Sample.size == human_n & Sample.size == algorithm_n, "within", "between")) %>% # code experimental design
   relocate(human_alternative, .after = predictor) %>% 
   select(-c(Year, journal_field, `If other, specify method`, Method.y, N, first_author_last_name.y)) %>% 
   mutate(Substudy = str_to_lower(Substudy)) %>% 
@@ -226,14 +229,19 @@ all_effects_vars <- left_join(all_effects_moderators, systematic_review, by = "t
   mutate(objective = if_else(task_objectivity == "Objective", 1, objective),
          objective = if_else(task_objectivity == "Subjective", 2, objective)) %>% 
   mutate(effect_id = 1:n())
+```
 
 
+```{r, eval=FALSE}
 # Since each row in the meta-analysis represents a single effect size, go back to the columns from the systematic review that are coded at the paper level and replace those values with the values from the substudy
 
 # Also fill in empty Operationalization cells
 write_csv(all_effects_vars, "all_effects_vars.csv")
 # SW working in Google Sheet to fill these in
+```
 
+
+```{r}
 # import filled in data sheet
 all_effects_moderators <- read_csv("all_effects_moderators_1.13.25.csv")
 
@@ -273,6 +281,46 @@ main_model_robust <- robust(main_model, cluster = study_id, clubSandwich=TRUE)
 print(summary(main_model_robust))
 ```
 ```{r}
+# Check for outliers
+
+#adapting CI calculation and plotting from Vaccaro et al. (2024) https://osf.io/rgqsc?view_only=b9e1e86079c048b4bfb03bee6966e560
+ # Standardized residuals of correlations (each effect size)
+  resid_es <- rstandard(main_model)
+  outliers_resid_es <- resid_es %>%
+    subset(resid_es$z > 3 | resid_es$z < -3) # determine outliers
+  print(outliers_resid_es)
+  
+  # Cooks distance (each effect size)
+  cooks_es <- cooks.distance(main_model_robust, progbar=TRUE) # takes a long time to run
+  threshold <- 4 / (length(es_correct_directions$effect_id))
+  outliers_cooks_es <- cooks_es %>%
+    subset(cooks_es > threshold) # determine influence
+  print(outliers_cooks_es)
+  
+  df_sens <- cbind(es_correct_directions, resid = resid_es$z, cooks = cooks_es)
+
+  # Perform re-analysis on dataset excluding outliers and influential points
+  df_sens <- filter(df_sens, (abs(df_sens$resid) < 3) & (df_sens$cooks < threshold)) 
+  main_model_sens <- rma.mv(yi = yi, 
+                  V = vi,
+                  data = df_sens,
+                  method = "REML",         # restricted maximum likelihood
+                  level = 95,              # CI
+                  digits = 7,              # decimal points
+                  slab = effect_id,          # paper labels
+                  random = ~ 1 | study_id/Substudy/effect_id # multilevel model to handle sample dependency
+                  )  
+  print(summary(main_model_sens))
+  
+  main_model_sens_robust <- robust(main_model_sens, cluster = df_sens$effect_id)
+  print(summary(main_model_sens_robust))
+  
+   # Outliers
+  df_outliers <- df_sens %>% 
+    filter(abs(resid) > 3 | cooks > threshold)
+```
+
+```{r}
 # Forest plot of all effect sizes
 forest(main_model_robust,
        annotate=FALSE,
@@ -284,19 +332,6 @@ forest(main_model_robust,
        efac = 2)
 ```
 
-
-```{r}
-# Nested effect sizes
-nested_mod <- rma.mv(yi = yi,
-                     V = vi,
-                     data = all_effects_moderators,
-                     random = ~1|study_id/effect_id,
-                     method = "REML",
-                     test = "t",
-                     dfs = "contain",
-                     mods = ~factor(expert, objective, paradigm))
-summary(nested_mod)
-```
 
 
 ```{r}
@@ -328,10 +363,27 @@ dummy_coded %>%
 ```{r}
 # moderator analyses
 
-# model that takes into account 
+# Nested effect sizes
+nested_mod <- rma.mv(yi = yi,
+                     V = vi,
+                     data = dummy_coded,
+                     random = ~1|study_id/Substudy/effect_id,
+                     method = "REML",
+                     test = "t",
+                     dfs = "contain",
+                     mods = ~factor(expert, 
+                                    objective_yn, 
+                                    subjective_yn, 
+                                    combined_yn, 
+                                    paradigm, 
+                                    within_between_design))
+summary(nested_mod)
 ```
 
-```{r}
+
+```
+
+```{r, eval=FALSE}
 ##check for influence
 #influence analysis
 influence(nested_mod)
@@ -339,7 +391,7 @@ influence(nested_mod)
 ```
 
 
-```{r}
+```{r, eval=FALSE}
 ##categorical moderator
 
 #moderator test to calculate qbetween value for categorical moderator
