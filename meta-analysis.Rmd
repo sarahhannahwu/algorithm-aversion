@@ -285,23 +285,26 @@ print(summary(main_model_robust))
 
 #adapting CI calculation and plotting from Vaccaro et al. (2024) https://osf.io/rgqsc?view_only=b9e1e86079c048b4bfb03bee6966e560
  # Standardized residuals of correlations (each effect size)
-  resid_es <- rstandard(main_model)
-  outliers_resid_es <- resid_es %>%
-    subset(resid_es$z > 3 | resid_es$z < -3) # determine outliers
-  print(outliers_resid_es)
-  
-  # Cooks distance (each effect size)
-  cooks_es <- cooks.distance(main_model_robust, progbar=TRUE) # takes a long time to run
-  threshold <- 4 / (length(es_correct_directions$effect_id))
-  outliers_cooks_es <- cooks_es %>%
-    subset(cooks_es > threshold) # determine influence
-  print(outliers_cooks_es)
-  
-  df_sens <- cbind(es_correct_directions, resid = resid_es$z, cooks = cooks_es)
+resid_es <- rstandard(main_model)
+outliers_resid_es <- resid_es %>%
+  subset(resid_es$z > 3 | resid_es$z < -3) # determine outliers
+print(outliers_resid_es)
+```
+Kaufmann study and Sharan study effect sizes are outliers.
 
-  # Perform re-analysis on dataset excluding outliers and influential points
-  df_sens <- filter(df_sens, (abs(df_sens$resid) < 3) & (df_sens$cooks < threshold)) 
-  main_model_sens <- rma.mv(yi = yi, 
+```{r}
+# Cooks distance (each effect size)
+cooks_es <- cooks.distance(main_model_robust, progbar=TRUE) # takes a long time to run
+threshold <- 4 / (length(es_correct_directions$effect_id))
+outliers_cooks_es <- cooks_es %>%
+  subset(cooks_es > threshold) # determine influence
+print(outliers_cooks_es)
+
+df_sens <- cbind(es_correct_directions, resid = resid_es$z, cooks = cooks_es)
+
+# Perform re-analysis on dataset excluding outliers and influential points
+df_sens <- filter(df_sens, (abs(df_sens$resid) < 3) & (df_sens$cooks < threshold)) 
+main_model_sens <- rma.mv(yi = yi, 
                   V = vi,
                   data = df_sens,
                   method = "REML",         # restricted maximum likelihood
@@ -310,14 +313,14 @@ print(summary(main_model_robust))
                   slab = effect_id,          # paper labels
                   random = ~ 1 | study_id/Substudy/effect_id # multilevel model to handle sample dependency
                   )  
-  print(summary(main_model_sens))
+print(summary(main_model_sens))
   
-  main_model_sens_robust <- robust(main_model_sens, cluster = df_sens$effect_id)
-  print(summary(main_model_sens_robust))
-  
-   # Outliers
-  df_outliers <- df_sens %>% 
-    filter(abs(resid) > 3 | cooks > threshold)
+main_model_sens_robust <- robust(main_model_sens, cluster = df_sens$effect_id)
+print(summary(main_model_sens_robust))
+
+# Outliers
+df_outliers <- df_sens %>% 
+  filter(abs(resid) > 3 | cooks > threshold)
 ```
 
 ```{r}
@@ -329,9 +332,14 @@ forest(main_model_robust,
        col = "salmon",
        xlab = "Effect sizes (Hedge’s g) and 95% confidence intervals",
        cex.axis = .75,
+       cex.lab = 1,
        efac = 2)
 ```
 
+```{r}
+funnel(main_model_robust, xlab = "Hedge's g")
+
+```
 
 
 ```{r}
@@ -362,7 +370,20 @@ dummy_coded %>%
 ```
 ```{r}
 # moderator analyses
+categorical_mods <- c("expert", "paradigm", "between_within_design", "objective_yn", "subjective_yn", "combined_yn")
 
+# function to loop through the moderators
+for(mod in categorical_mods) {
+  nested_mod <- rma.mv(yi = yi,
+                        V = vi,
+                        data = dummy_coded,
+                        random = ~1|study_id/Substudy/effect_id,
+                        method = "REML",
+                        test = "t",
+                        dfs = "contain",
+                        mods = as.formula(paste("~", mod)))
+  print(summary(nested_mod))
+}
 # Nested effect sizes
 nested_mod <- rma.mv(yi = yi,
                      V = vi,
@@ -371,12 +392,7 @@ nested_mod <- rma.mv(yi = yi,
                      method = "REML",
                      test = "t",
                      dfs = "contain",
-                     mods = ~factor(expert, 
-                                    objective_yn, 
-                                    subjective_yn, 
-                                    combined_yn, 
-                                    paradigm, 
-                                    within_between_design))
+                     mods = ~factor(expert))
 summary(nested_mod)
 ```
 
