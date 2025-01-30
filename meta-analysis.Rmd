@@ -14,6 +14,9 @@ library(tidyverse)
 library(dplyr)
 library(metafor)
 library(clubSandwich)
+library(robumeta)
+devtools::install_github("NightingaleHealth/ggforestplot")
+
 
 ```
 
@@ -266,6 +269,7 @@ es_from_mean_sd <- metafor::escalc(measure = "SMD",
 es_correct_directions <- es_from_mean_sd %>% 
   mutate(yi = if_else(effect_id %in% c(29, 65:71, 89:96), yi*(-1), yi))
 
+
 main_model <- rma.mv(yi = yi, 
                      V = vi, 
                      data = es_correct_directions, 
@@ -280,6 +284,24 @@ main_model_robust <- robust(main_model, cluster = study_id, clubSandwich=TRUE)
 
 print(summary(main_model_robust))
 ```
+```{r}
+  # I-Squared statistic (ratio of true to total variance)
+  # Using the formula from www.metafor-project.org/doku.php/tips:i2_multilevel_multivariate
+  W <- diag(1/es_correct_directions$vi)
+  X <- model.matrix(main_model_robust)
+  P <- W - W %*% X %*% solve(t(X) %*% W %*% X) %*% t(X) %*% W
+  I2_statistic <- 100 * sum(main_model_robust$sigma2) / 
+    (sum(main_model_robust$sigma2) + 
+       (main_model_robust$k-main_model_robust$p)/sum(diag(P)))
+  print(I2_statistic)
+  
+  # Percentage of I-Squared from within-experiments versus between-experiments
+  # Using the formula from www.metafor-project.org/doku.php/tips:i2_multilevel_multivariate
+  I2_pct <- 100 * main_model_robust$sigma2 / (sum(main_model_robust$sigma2) + (main_model_robust$k-main_model_robust$p)/sum(diag(P)))
+  print(I2_pct) # between-experiments (level 3), within-experiments (level 2)
+
+```
+
 ```{r}
 # Check for outliers
 
@@ -338,6 +360,24 @@ forest(main_model_robust,
 
 ```{r}
 funnel(main_model_robust, xlab = "Hedge's g")
+
+# Eggers regression (code adapted from Vaccaro et al.)
+eggers_model <- rma.mv(yi,
+                       vi,
+                       data=es_correct_directions,
+                       mod = ~sqrt(vi),
+                       tdist=TRUE,
+                       method = "REML",
+                       level = 95,
+                       digits = 7,
+                       slab = yi,
+                       random = ~1 | study_id/Substudy/effect_id)
+eggers_model_robust <- robust(eggers_model, cluster = study_id, adjust = TRUE)
+print(summary(eggers_model_robust))
+# Rosenthal, Orwin, & Rosenberg Fail Safe N test 
+fsn(yi, vi, data=dat1)
+fsn(yi, vi, data=dat1, type="Orwin")
+fsn(yi, vi, data=dat1, type="Rosenberg")
 
 ```
 
@@ -468,12 +508,8 @@ funnel(overallresult)
 trimandfill <- trimfill(overallresult)
 trimandfill
 funnel(trimandfill)
-#Eggers regression
-regtest(overallresult)
-#Rosenthal, Orwin, & Rosenberg Fail Safe N test 
-fsn(yi, vi, data=dat1)
-fsn(yi, vi, data=dat1, type="Orwin")
-fsn(yi, vi, data=dat1, type="Rosenberg")
+
+
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
